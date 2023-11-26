@@ -13,7 +13,10 @@ volatile bool y_pos_lim_state = true, y_neg_lim_state = true;
 const float SERIAL_BAUD = 19200;
 const byte X_POS_LIM_SW = 2, X_NEG_LIM_SW = 3;
 const byte Y_POS_LIM_SW = 18, Y_NEG_LIM_SW = 19;
-const byte ENABLE_MOTOR_A = 14, ENABLE_MOTOR_B = 15;
+const byte ENABLE_MOTOR_A = 52, ENABLE_MOTOR_B = 48;
+const byte DIR_MOTOR_A = 50, DIR_MOTOR_B = 46;
+const byte PULS_MOTOR_A = 10, PULS_MOTOR_B = 11;
+const byte ATTACHER = 6, ARM = 7;
 const float F_OSC = 16000000;     // 16MHz
 
 
@@ -32,6 +35,13 @@ bool initialize_robot(){
   // Set digital pins as outputs to enable motors
   pinMode(ENABLE_MOTOR_A, OUTPUT);
   pinMode(ENABLE_MOTOR_B, OUTPUT);
+
+  // Setup direction outputs
+  pinMode(DIR_MOTOR_A, OUTPUT);
+  pinMode(DIR_MOTOR_B, OUTPUT);
+
+  // Setup eletro magnet for grabbing
+  pinMode(ATTACHER, OUTPUT);
 
   // Enable motors
   digitalWrite(ENABLE_MOTOR_A, HIGH);
@@ -107,6 +117,10 @@ void setup(){
   pinMode(Y_POS_LIM_SW, INPUT_PULLUP);
   pinMode(Y_POS_LIM_SW, INPUT_PULLUP);
 
+  //PWM outputs
+  pinMode(PULS_MOTOR_A, OUTPUT);
+  pinMode(PULS_MOTOR_B, OUTPUT);
+
   // Input interrupts for limit switches.
   attachInterrupt(digitalPinToInterrupt(X_POS_LIM_SW), x_pos_lim_interrupt, CHANGE);
   attachInterrupt(digitalPinToInterrupt(X_NEG_LIM_SW), x_neg_lim_interrupt, CHANGE);
@@ -115,9 +129,22 @@ void setup(){
   setup_uart0_rx_interrupts();
 
   initialize_robot();
+
+  digitalWrite(DIR_MOTOR_A, LOW);
+  analogWrite (PULS_MOTOR_A, 127);
+
+  digitalWrite(DIR_MOTOR_B, LOW);
+  analogWrite (PULS_MOTOR_B, 127);
+
 }
 
 void loop(){
+
+
+  // RUN magnet
+  //analogWrite(ATTACHER, 127);
+    // digitalWrite(ATTACHER, HIGH);
+
   if (!x_neg_lim_state){
     digitalWrite(LED_BUILTIN, HIGH);
     delay(100);
@@ -134,3 +161,22 @@ void loop(){
   //   delay(1000);
   // }
 }
+
+// #include <Servo.h>
+
+// Servo myservo;  // create servo object to control a servo
+
+// int val;  
+
+// void setup() {
+//   // put your setup code here, to run once:
+//   myservo.attach(7);
+// }
+
+// void loop() {
+//   // put your main code here, to run repeatedly:
+//   val = 720;            // reads the value of the potentiometer (value between 0 and 1023)
+//   val = map(val, 0, 1023, 0, 180);     // scale it to use it with the servo (value between 0 and 180)
+//   myservo.write(val);                  // sets the servo position according to the scaled value
+//   delay(15);
+// }
