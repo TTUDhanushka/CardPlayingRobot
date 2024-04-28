@@ -3,11 +3,14 @@ Author:       Dhanushka Liyanage
 Description:  Card robot (cartesian robot) controller.
               Read ROS serial input commands and run stepper motors.
 Date:         2023-11-01
+Updated:      2024-04-28
 */
 
 // Globale variables
 volatile bool x_pos_lim_state = true, x_neg_lim_state = true;
 volatile bool y_pos_lim_state = true, y_neg_lim_state = true;
+
+volatile uint32_t _tickCount = 0;
 
 // Constants
 const float SERIAL_BAUD = 19200;
@@ -28,7 +31,8 @@ bool WriteToSerialPort(unsigned char data);
 bool home_x_y_axes();
 bool move_X_axis(float distance);
 
-bool initialize_robot(){
+bool initialize_robot()
+{
 
   bool status = false;
 
@@ -39,6 +43,10 @@ bool initialize_robot(){
   // Setup direction outputs
   pinMode(DIR_MOTOR_A, OUTPUT);
   pinMode(DIR_MOTOR_B, OUTPUT);
+
+  // Setup pulse out pins
+  pinMode(PULS_MOTOR_A, OUTPUT);
+  pinMode(PULS_MOTOR_B, OUTPUT);
 
   // Setup eletro magnet for grabbing
   pinMode(ATTACHER, OUTPUT);
@@ -80,6 +88,33 @@ void setup_uart0_rx_interrupts(){
   interrupts();
 }
 
+void setup_timer_interrupts(){
+  noInterrupts();
+
+  // CLear Timer Control Register
+  TCCR1A = 0;
+  TCCR1B = 0;
+
+  // Timer Interrupt Mask Register
+  TIMSK1 |= (1 << OCIE1A);  // Timer compare interrupt
+
+  // Timer Interrupt Flag Register
+  TIFR1 |= (0 << TOV1);
+
+  // Clock source
+  TCCR1B |= (1 << CS11);  // Clk / 8 from prescaler
+  TCCR1B |= (1 << WGM12); //| (1 << WGM13)
+
+  // Set pin toggle for Channel A
+  TCCR1A |= (1 << COM1A0);
+  TCCR1A |= (1 << COM2A0);
+
+  OCR1A = 199;
+
+  // Enable interrupts
+  interrupts();
+}
+
 bool WriteToSerialPort(unsigned char data){
   while (!(UCSR0A &= bit(UDRE0))) 
   {
@@ -96,6 +131,21 @@ ISR(USART0_RX_vect){
 
 // Do something
   
+}
+
+ISR(TIMER1_OVF_vect) 
+{
+  // Clear the interrupt flag.
+  TIFR1 |= (0 << TOV1);
+}
+
+
+ISR(TIMER1_COMPA_vect) 
+{
+  // Count the number of ticks.
+  _tickCount++;
+
+  TCNT1 = 0;
 }
 
 // X-axis positive  direction limit switch interrupt.
@@ -117,33 +167,30 @@ void setup(){
   pinMode(Y_POS_LIM_SW, INPUT_PULLUP);
   pinMode(Y_POS_LIM_SW, INPUT_PULLUP);
 
-  //PWM outputs
-  pinMode(PULS_MOTOR_A, OUTPUT);
-  pinMode(PULS_MOTOR_B, OUTPUT);
-
-  // Input interrupts for limit switches.
-  attachInterrupt(digitalPinToInterrupt(X_POS_LIM_SW), x_pos_lim_interrupt, CHANGE);
-  attachInterrupt(digitalPinToInterrupt(X_NEG_LIM_SW), x_neg_lim_interrupt, CHANGE);
+  // // Input interrupts for limit switches.
+  // attachInterrupt(digitalPinToInterrupt(X_POS_LIM_SW), x_pos_lim_interrupt, CHANGE);
+  // attachInterrupt(digitalPinToInterrupt(X_NEG_LIM_SW), x_neg_lim_interrupt, CHANGE);
 
   // UART - Serial communication interrupt setup.
   setup_uart0_rx_interrupts();
 
+  setup_timer_interrupts();
+
   initialize_robot();
 
   digitalWrite(DIR_MOTOR_A, LOW);
-  analogWrite (PULS_MOTOR_A, 127);
-
   digitalWrite(DIR_MOTOR_B, LOW);
-  analogWrite (PULS_MOTOR_B, 127);
 
 }
 
 void loop(){
 
+  //Serial.println("Running");
 
   // RUN magnet
   //analogWrite(ATTACHER, 127);
     // digitalWrite(ATTACHER, HIGH);
+  x_neg_lim_state = 0;
 
   if (!x_neg_lim_state){
     digitalWrite(LED_BUILTIN, HIGH);
