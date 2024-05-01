@@ -10,9 +10,9 @@ Updated:      2024-04-30
 volatile bool x_pos_lim_state = true, x_neg_lim_state = true;
 volatile bool y_pos_lim_state = true, y_neg_lim_state = true;
 
-volatile uint32_t _tickCount = 0;
+volatile double _tickCount = 0;
 volatile uint16_t dividend = 10000;
-
+double pulseCount = 0;
 
 // Constants
 // const float SERIAL_BAUD = 19200;
@@ -121,11 +121,11 @@ void setup_timer_interrupts(){
   TCCR2B |= (1 << WGM22); //| (1 << WGM13)
 
   // Set pin toggle for Channel A of timer 1 and 2
-  // TCCR1A |= (1 << COM1A0);     // normal operation - external pins disconnected
-  TCCR2A |= (1 << COM2A0);
+   TCCR1A |= (1 << COM1A0);     // normal operation - external pins disconnected
+   TCCR2A |= (1 << COM2A0);
 
-  OCR1A = 99;             // This will generate 10kHz clock
-  OCR2A = 99;
+  OCR1A = 49;             // This will generate 10kHz clock
+  OCR2A = 49;
 
   // Enable interrupts
   interrupts();
@@ -162,8 +162,8 @@ void loop(){
 
       //Serial.println("Idle");
 
-      set_rpm_motor_X(160);
-      set_rpm_motor_Y(160);
+      set_rpm_motor_X(60);
+      // set_rpm_motor_Y(100);
 
       break;
 
@@ -243,9 +243,32 @@ ISR(TIMER2_OVF_vect)
   TIFR2 |= (0 << TOV2);
 }
 
+volatile bool state = false;
+
 ISR(TIMER1_COMPA_vect) 
 {
   noInterrupts();
+
+  // if (_tickCount >= pulseCount){
+
+  //   // Serial.println("Pulse count");
+  //   // Serial.println(pulseCount);
+  //   // Serial.println("Tick Count");
+  //   // Serial.println(_tickCount);
+
+  //   _tickCount = 0;
+
+  //   // if (state){
+  //   //   // digitalWrite(10, !digitalRead(10));
+  //   //         digitalWrite(10, state);
+  //   //         state = false;
+  //   // }
+  //   // else{
+  //   //          digitalWrite(10, state);
+  //   //                     state = true;
+  //   // }
+
+  // }
 
   // Count the number of ticks.
   _tickCount++;
@@ -257,10 +280,12 @@ ISR(TIMER1_COMPA_vect)
 
 ISR(TIMER2_COMPA_vect) 
 {
+  noInterrupts();
   // Count the number of ticks.
   //_tickCount++;
 
   TCNT2 = 0;
+  interrupts();
 }
 
 // X-axis positive  direction limit switch interrupt.
@@ -274,29 +299,28 @@ void x_neg_lim_interrupt(){
 
 void set_rpm_motor_X(uint16_t speed)
 {
-  if (speed == 0){
+  // pulseCount = 15000 / speed;
+pulseCount = 200;
+  //int pps = map(speed, MIN_RPM, MAX_RPM, MIN_PPS, MAX_PPS);
 
-  }
-  int pps = map(speed, MIN_RPM, MAX_RPM, MIN_PPS, MAX_PPS);
-  Serial.println("Motor 1 PPS");
-    Serial.println(pps, DEC);
+  // Serial.println(pulseCount, DEC);
 
-  uint16_t OCR1A_setpoint = (uint16_t) (1000000 / (pps)) - 1;
+ // uint16_t OCR1A_setpoint = (uint16_t) (1000000 / (pps)) - 1;
 
- OCR1A_setpoint;
-  Serial.println("Motor 1");
-  Serial.println(OCR1A_setpoint, DEC);
+ //OCR1A_setpoint;
+  // Serial.println("Motor 1");
+  // Serial.println(OCR1A_setpoint, DEC);
 }
 
 void set_rpm_motor_Y(uint16_t speed)
 {
-  int pps = map(speed, MIN_RPM, MAX_RPM, MIN_PPS, MAX_PPS);
+  // int pps = map(speed, MIN_RPM, MAX_RPM, MIN_PPS, MAX_PPS);
 
-  uint16_t OCR2A_setpoint = (uint16_t) (1000000 / (pps)) - 1;
+  // uint16_t OCR2A_setpoint = (uint16_t) (1000000 / (pps)) - 1;
 
-  OCR2A = OCR2A_setpoint;
-  Serial.println("Motor 2");
-  Serial.println(OCR2A_setpoint);
+  // OCR2A = OCR2A_setpoint;
+  // Serial.println("Motor 2");
+  // Serial.println(OCR2A_setpoint);
 }
 
 // #include <Servo.h>
