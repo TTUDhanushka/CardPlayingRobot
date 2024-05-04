@@ -6,6 +6,8 @@ Date:         2023-11-01
 Updated:      2024-04-30
 */
 
+#include "RcServo.h"
+
 // Globale variables
 volatile bool x_pos_lim_state = true, x_neg_lim_state = true;
 volatile bool y_pos_lim_state = true, y_neg_lim_state = true;
@@ -13,6 +15,8 @@ volatile bool y_pos_lim_state = true, y_neg_lim_state = true;
 volatile double _tickCount = 0;
 volatile uint16_t dividend = 10000;
 double pulseCount = 0;
+
+RcServo grabber_arm;
 
 // Constants
 // const float SERIAL_BAUD = 19200;
@@ -30,7 +34,7 @@ enum RobotState {Idle, Initializing, Running, ShuttingDown, Error};
 RobotState robotCurrentState = Idle;
 
 const float F_OSC = 16000000;     // 16MHz
-
+const float F_PULSE = 5000;      // 10 kHz pulses
 
 // Function prototypes
 //void setup_uart0_rx_interrupts();
@@ -71,6 +75,8 @@ void setup_io_ports(){
 
   // Setup eletro magnet for grabbing
   pinMode(ATTACHER, OUTPUT);
+
+
 
 }
 
@@ -114,18 +120,20 @@ void setup_timer_interrupts(){
   TIFR2 |= (0 << TOV2);
 
   // Clock source
-  TCCR1B |= (1 << CS11);  // Clk / 8 from prescaler
+  TCCR1B |= (1 << CS11);  // Clk / 1 from prescaler
   TCCR1B |= (1 << WGM12); //| (1 << WGM13)
 
-  TCCR2B |= (1 << CS21);  // Clk / 8 from prescaler
+  TCCR2B |= (1 << CS21);  // Clk / 1 from prescaler
   TCCR2B |= (1 << WGM22); //| (1 << WGM13)
 
-  // Set pin toggle for Channel A of timer 1 and 2
-   TCCR1A |= (1 << COM1A0);     // normal operation - external pins disconnected
-   TCCR2A |= (1 << COM2A0);
+  // // Set pin toggle for Channel A of timer 1 and 2
+  // TCCR1A |= (1 << COM1A0);     // normal operation - external pins disconnected
+  // TCCR2A |= (1 << COM2A0);
 
-  OCR1A = 49;             // This will generate 10kHz clock
-  OCR2A = 49;
+  uint16_t reg_value = (uint16_t) (F_OSC / (16 * F_PULSE)) - 1;
+
+  OCR1A = reg_value;             // This will generate 10kHz clock
+  OCR2A = reg_value;
 
   // Enable interrupts
   interrupts();
@@ -133,6 +141,7 @@ void setup_timer_interrupts(){
 
 void setup()
 {
+  Serial.begin(9600);
 
   setup_io_ports();
 
@@ -144,7 +153,7 @@ void setup()
   attachInterrupt(digitalPinToInterrupt(X_POS_LIM_SW), x_pos_lim_interrupt, CHANGE);
   attachInterrupt(digitalPinToInterrupt(X_NEG_LIM_SW), x_neg_lim_interrupt, CHANGE);
 
-  Serial.begin(9600);
+  grabber_arm.attach(ARM);
 }
 
 void loop(){
@@ -249,26 +258,28 @@ ISR(TIMER1_COMPA_vect)
 {
   noInterrupts();
 
-  // if (_tickCount >= pulseCount){
+  if (_tickCount >= pulseCount){
 
   //   // Serial.println("Pulse count");
   //   // Serial.println(pulseCount);
   //   // Serial.println("Tick Count");
   //   // Serial.println(_tickCount);
 
-  //   _tickCount = 0;
+    _tickCount = 0;
 
-  //   // if (state){
-  //   //   // digitalWrite(10, !digitalRead(10));
-  //   //         digitalWrite(10, state);
-  //   //         state = false;
-  //   // }
-  //   // else{
-  //   //          digitalWrite(10, state);
-  //   //                     state = true;
-  //   // }
+    if (state){
+      // digitalWrite(10, !digitalRead(10));
+            digitalWrite(10, state);
+            state = false;
+    }
+    else{
+             digitalWrite(10, state);
+                        state = true;
+    }
 
-  // }
+  }
+
+  // PORTB |= (1 << PORTB);
 
   // Count the number of ticks.
   _tickCount++;
@@ -300,7 +311,7 @@ void x_neg_lim_interrupt(){
 void set_rpm_motor_X(uint16_t speed)
 {
   // pulseCount = 15000 / speed;
-pulseCount = 200;
+pulseCount = 3;
   //int pps = map(speed, MIN_RPM, MAX_RPM, MIN_PPS, MAX_PPS);
 
   // Serial.println(pulseCount, DEC);
@@ -322,22 +333,3 @@ void set_rpm_motor_Y(uint16_t speed)
   // Serial.println("Motor 2");
   // Serial.println(OCR2A_setpoint);
 }
-
-// #include <Servo.h>
-
-// Servo myservo;  // create servo object to control a servo
-
-// int val;  
-
-// void setup() {
-//   // put your setup code here, to run once:
-//   myservo.attach(7);
-// }
-
-// void loop() {
-//   // put your main code here, to run repeatedly:
-//   val = 720;            // reads the value of the potentiometer (value between 0 and 1023)
-//   val = map(val, 0, 1023, 0, 180);     // scale it to use it with the servo (value between 0 and 180)
-//   myservo.write(val);                  // sets the servo position according to the scaled value
-//   delay(15);
-// }
