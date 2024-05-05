@@ -6,17 +6,19 @@ Date:         2023-11-01
 Updated:      2024-04-30
 */
 
-#include "RcServo.h"
+#include "tb6600_stepper.h"
+#include <Servo.h>
 
 // Globale variables
 volatile bool x_pos_lim_state = true, x_neg_lim_state = true;
 volatile bool y_pos_lim_state = true, y_neg_lim_state = true;
 
-volatile double _tickCount = 0;
+// volatile double _tickCount = 0;
 volatile uint16_t dividend = 10000;
 double pulseCount = 0;
 
-RcServo grabber_arm;
+Stepper x_stepper;
+Servo grabber_servo; 
 
 // Constants
 // const float SERIAL_BAUD = 19200;
@@ -33,8 +35,8 @@ const uint16_t MAX_RPM = 750, MIN_RPM = 0;
 enum RobotState {Idle, Initializing, Running, ShuttingDown, Error};
 RobotState robotCurrentState = Idle;
 
-const float F_OSC = 16000000;     // 16MHz
-const float F_PULSE = 5000;      // 10 kHz pulses
+// const float F_OSC = 16000000;     // 16MHz
+// const float F_PULSE = 5000;      // 10 kHz pulses
 
 // Function prototypes
 //void setup_uart0_rx_interrupts();
@@ -76,8 +78,6 @@ void setup_io_ports(){
   // Setup eletro magnet for grabbing
   pinMode(ATTACHER, OUTPUT);
 
-
-
 }
 
 // void setup_uart0_rx_interrupts(){
@@ -101,44 +101,6 @@ void setup_io_ports(){
 //   interrupts();
 // }
 
-void setup_timer_interrupts(){
-  noInterrupts();
-
-  // Clear Timer Control Register
-  TCCR1A = 0;
-  TCCR1B = 0;
-
-  TCCR2A = 0;
-  TCCR2B = 0;
-
-  // Timer Interrupt Mask Register
-  TIMSK1 |= (1 << OCIE1A);  // Timer compare interrupt
-  TIMSK2 |= (1 << OCIE2A);  // Timer compare interrupt
-
-  // Timer Interrupt Flag Register
-  TIFR1 |= (0 << TOV1);
-  TIFR2 |= (0 << TOV2);
-
-  // Clock source
-  TCCR1B |= (1 << CS11);  // Clk / 1 from prescaler
-  TCCR1B |= (1 << WGM12); //| (1 << WGM13)
-
-  TCCR2B |= (1 << CS21);  // Clk / 1 from prescaler
-  TCCR2B |= (1 << WGM22); //| (1 << WGM13)
-
-  // // Set pin toggle for Channel A of timer 1 and 2
-  // TCCR1A |= (1 << COM1A0);     // normal operation - external pins disconnected
-  // TCCR2A |= (1 << COM2A0);
-
-  uint16_t reg_value = (uint16_t) (F_OSC / (16 * F_PULSE)) - 1;
-
-  OCR1A = reg_value;             // This will generate 10kHz clock
-  OCR2A = reg_value;
-
-  // Enable interrupts
-  interrupts();
-}
-
 void setup()
 {
   Serial.begin(9600);
@@ -147,13 +109,15 @@ void setup()
 
   //setup_uart0_rx_interrupts();          // UART - Serial communication interrupt setup.
 
-  setup_timer_interrupts();             // Setup timer interrupts for stepper motor control.
+  // setup_timer_interrupts();             // Setup timer interrupts for stepper motor control.
 
   // Input interrupts for limit switches.
   attachInterrupt(digitalPinToInterrupt(X_POS_LIM_SW), x_pos_lim_interrupt, CHANGE);
   attachInterrupt(digitalPinToInterrupt(X_NEG_LIM_SW), x_neg_lim_interrupt, CHANGE);
 
-  grabber_arm.attach(ARM);
+  x_stepper.attach(11);
+
+  grabber_servo.attach(7);
 }
 
 void loop(){
@@ -171,8 +135,11 @@ void loop(){
 
       //Serial.println("Idle");
 
-      set_rpm_motor_X(60);
-      // set_rpm_motor_Y(100);
+      x_stepper.set_speed(2);
+
+      grabber_servo.write(150);
+
+      digitalWrite(ATTACHER, HIGH);
 
       break;
 
@@ -239,65 +206,7 @@ bool move_X_axis(float distance){
 
 }
 
-
-ISR(TIMER1_OVF_vect) 
-{
-  // Clear the interrupt flag.
-  TIFR1 |= (0 << TOV1);
-}
-
-ISR(TIMER2_OVF_vect) 
-{
-  // Clear the interrupt flag.
-  TIFR2 |= (0 << TOV2);
-}
-
 volatile bool state = false;
-
-ISR(TIMER1_COMPA_vect) 
-{
-  noInterrupts();
-
-  if (_tickCount >= pulseCount){
-
-  //   // Serial.println("Pulse count");
-  //   // Serial.println(pulseCount);
-  //   // Serial.println("Tick Count");
-  //   // Serial.println(_tickCount);
-
-    _tickCount = 0;
-
-    if (state){
-      // digitalWrite(10, !digitalRead(10));
-            digitalWrite(10, state);
-            state = false;
-    }
-    else{
-             digitalWrite(10, state);
-                        state = true;
-    }
-
-  }
-
-  // PORTB |= (1 << PORTB);
-
-  // Count the number of ticks.
-  _tickCount++;
-
-  TCNT1 = 0;
-
-  interrupts();
-}
-
-ISR(TIMER2_COMPA_vect) 
-{
-  noInterrupts();
-  // Count the number of ticks.
-  //_tickCount++;
-
-  TCNT2 = 0;
-  interrupts();
-}
 
 // X-axis positive  direction limit switch interrupt.
 void x_pos_lim_interrupt(){
@@ -308,28 +217,3 @@ void x_neg_lim_interrupt(){
   x_neg_lim_state = digitalRead(X_NEG_LIM_SW);
 }
 
-void set_rpm_motor_X(uint16_t speed)
-{
-  // pulseCount = 15000 / speed;
-pulseCount = 3;
-  //int pps = map(speed, MIN_RPM, MAX_RPM, MIN_PPS, MAX_PPS);
-
-  // Serial.println(pulseCount, DEC);
-
- // uint16_t OCR1A_setpoint = (uint16_t) (1000000 / (pps)) - 1;
-
- //OCR1A_setpoint;
-  // Serial.println("Motor 1");
-  // Serial.println(OCR1A_setpoint, DEC);
-}
-
-void set_rpm_motor_Y(uint16_t speed)
-{
-  // int pps = map(speed, MIN_RPM, MAX_RPM, MIN_PPS, MAX_PPS);
-
-  // uint16_t OCR2A_setpoint = (uint16_t) (1000000 / (pps)) - 1;
-
-  // OCR2A = OCR2A_setpoint;
-  // Serial.println("Motor 2");
-  // Serial.println(OCR2A_setpoint);
-}
