@@ -19,7 +19,9 @@ class Stepper
   Stepper();
   void attach(uint8_t pin);
   void set_speed(uint16_t position);
-  
+  void move_absolute(uint16_t distance);
+  void move_relative(uint16_t distance)
+
   private:
 
 };

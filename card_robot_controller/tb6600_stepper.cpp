@@ -73,3 +73,11 @@ void Stepper::attach(uint8_t pin){
 void Stepper::set_speed(uint16_t speed){
   set_speed_value = speed;
 }
+
+void Stepper::move_absolute(uint16_t distance){
+
+}
+
+void Stepper::move_relative(uint16_t distance){
+
+}
