@@ -16,6 +16,8 @@ Runs using Timer 2
 #define MAX_STEPPERS 5
 #define INVALID_STEPPER 255
 
+#define DEFAULT_RPM 6
+
 typedef struct{
   uint8_t stepper_pin;
   volatile uint16_t pulses;

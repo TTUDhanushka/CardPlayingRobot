@@ -6,11 +6,11 @@
 
 uint16_t set_speed_value;
 volatile double _tickCount = 0;
-uint8_t servo_pin;
+uint8_t stepper_pin;
 
 uint8_t stepperCount = 0;
 
-static stepper_t setppers[MAX_STEPPERS];
+static stepper_t steppers[MAX_STEPPERS];
 
 void Init_ISR(){
   cli();
@@ -54,7 +54,7 @@ ISR(TIMER2_COMPA_vect)
   _tickCount++;
 
   if (_tickCount >= set_speed_value){
-    digitalWrite(servo_pin, !digitalRead(servo_pin));
+    digitalWrite(stepper_pin, !digitalRead(stepper_pin));
     _tickCount = 0;
   }
 
@@ -81,7 +81,7 @@ Stepper::Stepper()
 
 void Stepper::attach(uint8_t pin){
   pinMode(pin, OUTPUT);
-  servo_pin = pin;
+  stepper_pin = pin;
 }
 
 void Stepper::set_speed(uint16_t speed){
