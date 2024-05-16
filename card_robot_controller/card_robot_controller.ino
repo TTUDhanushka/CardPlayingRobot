@@ -17,7 +17,7 @@ volatile bool y_pos_lim_state = true, y_neg_lim_state = true;
 volatile uint16_t dividend = 10000;
 double pulseCount = 0;
 
-Stepper x_stepper;
+Stepper x_stepper, y_stepper;
 Servo grabber_servo; 
 
 // Constants
@@ -115,9 +115,10 @@ void setup()
   attachInterrupt(digitalPinToInterrupt(X_POS_LIM_SW), x_pos_lim_interrupt, CHANGE);
   attachInterrupt(digitalPinToInterrupt(X_NEG_LIM_SW), x_neg_lim_interrupt, CHANGE);
 
-  x_stepper.attach(11);
+  x_stepper.attach(10);
+  y_stepper.attach(11);
 
-  grabber_servo.attach(7);
+  // grabber_servo.attach(7);
 }
 
 void loop(){
@@ -135,9 +136,10 @@ void loop(){
 
       //Serial.println("Idle");
 
-      x_stepper.set_speed(2);
+      x_stepper.set_speed(20);
+      y_stepper.set_speed(1);
 
-      grabber_servo.write(150);
+      // grabber_servo.write(150);
 
       digitalWrite(ATTACHER, HIGH);
 
