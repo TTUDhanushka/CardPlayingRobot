@@ -136,8 +136,8 @@ void loop(){
 
       //Serial.println("Idle");
 
-      x_stepper.set_speed(20);
-      y_stepper.set_speed(1);
+      x_stepper.set_speed(5);
+      y_stepper.set_speed(5);
 
       // grabber_servo.write(150);
 
