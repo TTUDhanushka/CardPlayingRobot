@@ -22,8 +22,8 @@ Servo grabber_servo;
 
 // Constants
 // const float SERIAL_BAUD = 19200;
-const byte X_POS_LIM_SW = 2, X_NEG_LIM_SW = 3;
-const byte Y_POS_LIM_SW = 18, Y_NEG_LIM_SW = 19;
+const byte X_POS_LIM_SW = 19, X_NEG_LIM_SW = 18;
+const byte Y_POS_LIM_SW = 3, Y_NEG_LIM_SW = 2;
 const byte ENABLE_MOTOR_A = 52, ENABLE_MOTOR_B = 48;
 const byte DIR_MOTOR_A = 50, DIR_MOTOR_B = 46;
 const byte PULS_MOTOR_A = 10, PULS_MOTOR_B = 11;
@@ -49,9 +49,9 @@ void initialize_robot();
 
 bool WriteToSerialPort(unsigned char data);
 bool home_x_y_axes();
-bool move_X_axis(float distance);
-void set_rpm_motor_X(uint16_t speed);
-void set_rpm_motor_Y(uint16_t speed);
+// bool move_X_axis(float distance);
+// void set_rpm_motor_X(uint16_t speed);
+// void set_rpm_motor_Y(uint16_t speed);
 
 void setup_io_ports(){
   // Status indicator
@@ -112,6 +112,8 @@ void setup()
   // setup_timer_interrupts();             // Setup timer interrupts for stepper motor control.
 
   // Input interrupts for limit switches.
+  attachInterrupt(digitalPinToInterrupt(Y_POS_LIM_SW), y_pos_lim_interrupt, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(Y_NEG_LIM_SW), y_neg_lim_interrupt, CHANGE);
   attachInterrupt(digitalPinToInterrupt(X_POS_LIM_SW), x_pos_lim_interrupt, CHANGE);
   attachInterrupt(digitalPinToInterrupt(X_NEG_LIM_SW), x_neg_lim_interrupt, CHANGE);
 
@@ -131,15 +133,26 @@ void loop(){
       //digitalWrite(PULS_MOTOR_A, LOW);
       //digitalWrite(PULS_MOTOR_B, LOW);
 
-      //digitalWrite(DIR_MOTOR_A, HIGH);
-      //digitalWrite(DIR_MOTOR_B, HIGH);
+      digitalWrite(DIR_MOTOR_A, HIGH);
+      digitalWrite(DIR_MOTOR_B, HIGH);
 
       //Serial.println("Idle");
+      for(int n = 1; n < 300; n++){
+        x_stepper.set_speed(n);
+        y_stepper.set_speed(n); // 
 
-      x_stepper.set_speed(5);
-      y_stepper.set_speed(5);
+        delay(1000);
+      }
 
-      // grabber_servo.write(150);
+      //Serial.println("Idle");
+      for(int n = 300; n > 0; n--){
+        x_stepper.set_speed(n);
+        y_stepper.set_speed(n); // 
+
+        delay(1000);
+      }
+
+      //grabber_servo.write(150);
 
       digitalWrite(ATTACHER, HIGH);
 
@@ -152,10 +165,9 @@ void loop(){
       break;
 
   }
+  
 
-  // RUN magnet
-  //analogWrite(ATTACHER, 127);
-    // digitalWrite(ATTACHER, HIGH);
+
   x_neg_lim_state = 0;
 
   if (!x_neg_lim_state){
@@ -176,8 +188,8 @@ void initialize_robot(){
   digitalWrite(ENABLE_MOTOR_B, HIGH);
 
   // Rotation directions -> Must be set in
-  digitalWrite(DIR_MOTOR_A, LOW);
-  digitalWrite(DIR_MOTOR_B, LOW);
+  digitalWrite(DIR_MOTOR_A, HIGH);
+  digitalWrite(DIR_MOTOR_B, HIGH);
 
 }
 
@@ -199,23 +211,27 @@ void initialize_robot(){
   
 // }
 
-bool home_x_y_axes(){
-
-  return true;
-}
-
-bool move_X_axis(float distance){
-
-}
 
 volatile bool state = false;
 
 // X-axis positive  direction limit switch interrupt.
 void x_pos_lim_interrupt(){
+  Serial.println("x pos lim");
   x_pos_lim_state = digitalRead(X_POS_LIM_SW);
 }
 
 void x_neg_lim_interrupt(){
+  Serial.println("x neg lim");
   x_neg_lim_state = digitalRead(X_NEG_LIM_SW);
 }
 
+// X-axis positive  direction limit switch interrupt.
+void y_pos_lim_interrupt(){
+  Serial.println("y pos lim");
+  y_pos_lim_state = digitalRead(Y_POS_LIM_SW);
+}
+
+void y_neg_lim_interrupt(){
+  Serial.println("y neg lim");
+  y_neg_lim_state = digitalRead(Y_NEG_LIM_SW);
+}
