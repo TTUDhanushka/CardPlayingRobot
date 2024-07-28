@@ -17,16 +17,20 @@ volatile bool y_pos_lim_state = true, y_neg_lim_state = true;
 volatile uint16_t dividend = 10000;
 double pulseCount = 0;
 
-Stepper x_stepper, y_stepper;
 // Servo grabber_servo; 
 
-// Constants
+// IO Pin mappings
+//------------------------------------------------------------------------------
 // const float SERIAL_BAUD = 19200;
+
+// LImit switches attached pins.
 const byte X_POS_LIM_SW = 19, X_NEG_LIM_SW = 18;
 const byte Y_POS_LIM_SW = 3, Y_NEG_LIM_SW = 2;
+
+// Stepper motor pins
 const byte ENABLE_MOTOR_A = 52, ENABLE_MOTOR_B = 48;
 const byte DIR_MOTOR_A = 50, DIR_MOTOR_B = 46;
-const byte PULS_MOTOR_A = 10, PULS_MOTOR_B = 11;
+const byte PULSE_MOTOR_A = 10, PULSE_MOTOR_B = 11;
 // const byte ATTACHER = 6, ARM = 7;
 
 const uint16_t MAX_PPS = 5000, MIN_PPS = 400;
@@ -45,9 +49,8 @@ void initialize_robot();
 
 bool WriteToSerialPort(unsigned char data);
 bool home_x_y_axes();
-// bool move_X_axis(float distance);
-// void set_rpm_motor_X(uint16_t speed);
-// void set_rpm_motor_Y(uint16_t speed);
+
+Stepper x_stepper, y_stepper;
 
 void setup_io_ports(){
   // Status indicator
@@ -67,12 +70,13 @@ void setup_io_ports(){
   pinMode(DIR_MOTOR_A, OUTPUT);
   pinMode(DIR_MOTOR_B, OUTPUT);
 
-  // Setup pulse out pins
-  pinMode(PULS_MOTOR_A, OUTPUT);
-  pinMode(PULS_MOTOR_B, OUTPUT);
+  // // Setup pulse out pins
+  // pinMode(PULSE_MOTOR_A, OUTPUT);
+  // pinMode(PULSE_MOTOR_B, OUTPUT);
 
   // Setup eletro magnet for grabbing
   // pinMode(ATTACHER, OUTPUT);
+
 
 }
 
@@ -111,10 +115,11 @@ void setup()
   attachInterrupt(digitalPinToInterrupt(X_POS_LIM_SW), x_pos_lim_interrupt, CHANGE);
   attachInterrupt(digitalPinToInterrupt(X_NEG_LIM_SW), x_neg_lim_interrupt, CHANGE);
 
-  x_stepper.attach(10);
-  y_stepper.attach(11);
+  x_stepper.attach(PULSE_MOTOR_A);
+  y_stepper.attach(PULSE_MOTOR_B);
 
   // grabber_servo.attach(7);
+
 }
 
 void loop(){
@@ -123,28 +128,32 @@ void loop(){
   switch(robotCurrentState){
 
     case Idle:
+      
+      //Serial.println("Idle state");
       // Do nothing and switch off motors.
-      //digitalWrite(PULS_MOTOR_A, LOW);
-      //digitalWrite(PULS_MOTOR_B, LOW);
+      //digitalWrite(PULSE_MOTOR_A, LOW);
+      //digitalWrite(PULSE_MOTOR_B, LOW);
 
       digitalWrite(DIR_MOTOR_A, HIGH);
       digitalWrite(DIR_MOTOR_B, HIGH);
 
-      // //Serial.println("Idle");
-      // for(int n = 1; n < 299; n++){
-      //   x_stepper.set_speed(n);
-      //   y_stepper.set_speed(n); // 
+      y_stepper.set_speed(50);
 
-      //   delay(50);
-      // }
+      // Motor speed increasing
+      for(int n = 1; n < 299; n++){
+        x_stepper.set_speed(n);
+        y_stepper.set_speed(n);  
 
-      // //Serial.println("Idle");
-      // for(int n = 299; n > 1; n--){
-      //   x_stepper.set_speed(n);
-      //   y_stepper.set_speed(n); // 
+         delay(1000);
+      }
 
-      //   delay(50);
-      // }
+      
+      for(int n = 299; n > 1; n--){
+        x_stepper.set_speed(n);
+        y_stepper.set_speed(n); // 
+
+        delay(1000);
+      }
 
       //grabber_servo.write(150);
 

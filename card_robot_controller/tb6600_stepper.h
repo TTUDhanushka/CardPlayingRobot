@@ -9,15 +9,17 @@ Runs using Timer 2
 
 #include <Arduino.h>
 
-#define F_OSC 16000000  // Clock of the arduino
-//#define F_PULSE 250000  // 4us pulses
-#define F_PULSE 400  // 
-#define TIMER3_PRE_SCALER 64 // Change to 8 -> 64
+#define F_OSC 16000000        // Clock of the arduino
+#define F_PULSE 400           // 
+#define TIMER3_PRE_SCALER 64  // Change to 8 -> 64
 
 #define MAX_STEPPERS 5
 #define INVALID_STEPPER 255
 
 #define DEFAULT_RPM 6
+
+void Init_ISR();
+void StepperHandler();
 
 typedef enum {
   forward = false,
@@ -42,7 +44,7 @@ class Stepper {
   public:
     Stepper();
     void attach(uint8_t pin);
-    void set_speed(uint16_t position);
+    void set_speed(uint16_t speed);
     void move_absolute(uint16_t target_position);
     void move_relative(uint16_t target_position);
     void home_axis(bool homing_sensor);
