@@ -7,7 +7,7 @@ Updated:      2024-04-30
 */
 
 #include "tb6600_stepper.h"
-#include <Servo.h>
+// #include <Servo.h>
 
 // Globale variables
 volatile bool x_pos_lim_state = true, x_neg_lim_state = true;
@@ -18,7 +18,7 @@ volatile uint16_t dividend = 10000;
 double pulseCount = 0;
 
 Stepper x_stepper, y_stepper;
-Servo grabber_servo; 
+// Servo grabber_servo; 
 
 // Constants
 // const float SERIAL_BAUD = 19200;
@@ -27,7 +27,7 @@ const byte Y_POS_LIM_SW = 3, Y_NEG_LIM_SW = 2;
 const byte ENABLE_MOTOR_A = 52, ENABLE_MOTOR_B = 48;
 const byte DIR_MOTOR_A = 50, DIR_MOTOR_B = 46;
 const byte PULS_MOTOR_A = 10, PULS_MOTOR_B = 11;
-const byte ATTACHER = 6, ARM = 7;
+// const byte ATTACHER = 6, ARM = 7;
 
 const uint16_t MAX_PPS = 5000, MIN_PPS = 400;
 const uint16_t MAX_RPM = 750, MIN_RPM = 0;
@@ -35,12 +35,8 @@ const uint16_t MAX_RPM = 750, MIN_RPM = 0;
 enum RobotState {Idle, Initializing, Running, ShuttingDown, Error};
 RobotState robotCurrentState = Idle;
 
-// const float F_OSC = 16000000;     // 16MHz
-// const float F_PULSE = 5000;      // 10 kHz pulses
-
 // Function prototypes
 //void setup_uart0_rx_interrupts();
-void setup_timer_interrupts();
 void setup_io_ports();
 
 void initialize_robot();
@@ -76,7 +72,7 @@ void setup_io_ports(){
   pinMode(PULS_MOTOR_B, OUTPUT);
 
   // Setup eletro magnet for grabbing
-  pinMode(ATTACHER, OUTPUT);
+  // pinMode(ATTACHER, OUTPUT);
 
 }
 
@@ -109,8 +105,6 @@ void setup()
 
   //setup_uart0_rx_interrupts();          // UART - Serial communication interrupt setup.
 
-  // setup_timer_interrupts();             // Setup timer interrupts for stepper motor control.
-
   // Input interrupts for limit switches.
   attachInterrupt(digitalPinToInterrupt(Y_POS_LIM_SW), y_pos_lim_interrupt, CHANGE);
   attachInterrupt(digitalPinToInterrupt(Y_NEG_LIM_SW), y_neg_lim_interrupt, CHANGE);
@@ -136,25 +130,25 @@ void loop(){
       digitalWrite(DIR_MOTOR_A, HIGH);
       digitalWrite(DIR_MOTOR_B, HIGH);
 
-      //Serial.println("Idle");
-      for(int n = 1; n < 300; n++){
-        x_stepper.set_speed(n);
-        y_stepper.set_speed(n); // 
+      // //Serial.println("Idle");
+      // for(int n = 1; n < 299; n++){
+      //   x_stepper.set_speed(n);
+      //   y_stepper.set_speed(n); // 
 
-        delay(1000);
-      }
+      //   delay(50);
+      // }
 
-      //Serial.println("Idle");
-      for(int n = 300; n > 0; n--){
-        x_stepper.set_speed(n);
-        y_stepper.set_speed(n); // 
+      // //Serial.println("Idle");
+      // for(int n = 299; n > 1; n--){
+      //   x_stepper.set_speed(n);
+      //   y_stepper.set_speed(n); // 
 
-        delay(1000);
-      }
+      //   delay(50);
+      // }
 
       //grabber_servo.write(150);
 
-      digitalWrite(ATTACHER, HIGH);
+      // digitalWrite(ATTACHER, HIGH);
 
       break;
 
@@ -167,17 +161,16 @@ void loop(){
   }
   
 
+  // x_neg_lim_state = 0;
 
-  x_neg_lim_state = 0;
-
-  if (!x_neg_lim_state){
-    digitalWrite(LED_BUILTIN, HIGH);
-    delay(100);
-  }
-  else{
-    digitalWrite(LED_BUILTIN, LOW);
-    delay(100);
-  }
+  // if (!x_neg_lim_state){
+  //   digitalWrite(LED_BUILTIN, HIGH);
+  //   delay(100);
+  // }
+  // else{
+  //   digitalWrite(LED_BUILTIN, LOW);
+  //   delay(100);
+  // }
 
 }
 

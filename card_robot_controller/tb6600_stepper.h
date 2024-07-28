@@ -12,7 +12,7 @@ Runs using Timer 2
 #define F_OSC 16000000  // Clock of the arduino
 //#define F_PULSE 250000  // 4us pulses
 #define F_PULSE 400  // 
-#define TIMER4_PRE_SCALER 64 // Change to 8 -> 64
+#define TIMER3_PRE_SCALER 64 // Change to 8 -> 64
 
 #define MAX_STEPPERS 5
 #define INVALID_STEPPER 255
