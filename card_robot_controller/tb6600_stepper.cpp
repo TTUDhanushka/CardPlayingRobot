@@ -24,8 +24,8 @@ uint16_t ocr_reg_table[300] = {50000, 46874, 23437, 15624, 11718, 9374, 7812, 66
                                 178, 177, 177, 176, 175, 175, 174, 173, 173, 172, 171, 171, 170, 169, 169, 168, 168, 167, 166, 166, 165, 165, 164, 163, 163, 162, 162, 
                                 161, 161, 160, 160, 159, 158, 158, 158, 157, 157, 156, 155};
 
-void Init_ISR() {
-  noInterrupts();
+void Init_Timer3_ISR() {
+  cli();
 
   // Clear Timer Control Register
   TCCR3A = 0;
@@ -41,15 +41,39 @@ void Init_ISR() {
   TCCR3B |= (1 << WGM32);  //| (1 << WGM13)
 
   // uint32_t reg_value = (uint32_t)(F_OSC / (16 * F_PULSE)) - 1;
-
-  // OCR2A = (uint16_t)reg_value;  // This will generate 250kHz clock
-  OCR3A = 155;
+  OCR3A = 155;        // Initializing to a default value
 
   // Timer Interrupt Mask Register
   TIMSK3 |= (1 << OCIE3A);  // Timer compare interrupt
   TIMSK3 |= (1 << TOIE3);  // Timer overflow interrupt
 
-  interrupts();
+  sei();
+}
+
+void Init_Timer4_ISR() {
+  cli();
+
+  // Clear Timer4 Control Register
+  TCCR4A = 0;
+  TCCR4B = 0;
+  
+  TCNT4 = 0;
+
+  // Timer4 Interrupt Flag Register
+  TIFR4 |= (0 << TOV4);
+
+  // Clock source
+  TCCR4B |= (1 << CS41) | (1 << CS40);   // Clk / 64 from prescaler
+  TCCR4B |= (1 << WGM42);  //
+
+  // uint32_t reg_value = (uint32_t)(F_OSC / (16 * F_PULSE)) - 1;
+  OCR4A = 155;        // Initializing to a default value
+
+  // Timer Interrupt Mask Register
+  TIMSK4 |= (1 << OCIE4A);  // Timer compare interrupt
+  TIMSK4 |= (1 << TOIE4);  // Timer overflow interrupt
+
+  sei();
 }
 
 ISR(TIMER3_OVF_vect) {
@@ -57,29 +81,61 @@ ISR(TIMER3_OVF_vect) {
   TIFR3 |= (0 << TOV3);
 }
 
+ISR(TIMER4_OVF_vect) {
+  // Clear the interrupt flag.
+  TIFR4 |= (0 << TOV4);
+}
+
 ISR(TIMER3_COMPA_vect) {
   cli();
 
-  StepperHandler();
+  StepperHandler(0);            // Index 0 always use Timer 3.
 
   sei();
 }
 
-void StepperHandler() {
-  // Setting the speed by varying output pulse duration with counting. OCR2A register value stays constant.
-  for (int n = 0; n < stepperCount; n++) {
+ISR(TIMER4_COMPA_vect) {
 
-    OCR3A = ocr_reg_table[steppers[n].pulses];
+  cli();
 
-    // if (steppers[n].tickCount >= steppers[n].pulses) {
-    digitalWrite(steppers[n].stepper_pin, !digitalRead(steppers[n].stepper_pin));
-    //   steppers[n].tickCount = 0;
-    // }
+  StepperHandler(1);            // Index 1 always use Timer 4.
 
+  sei();
+}
+
+void StepperHandler(int stepperIndex) {
+
+  // Toggle the pin
+  if (steppers[stepperIndex].motorState == State::stop){
+
+    digitalWrite(steppers[stepperIndex].pulsePin, LOW);
+
+  }
+  else{
+
+    digitalWrite(steppers[stepperIndex].pulsePin, !digitalRead(steppers[stepperIndex].pulsePin));
 
   }
 
-  TCNT3 = 0;
+
+  // Setting the speed by varying output pulse duration with counting. OCR2A register value stays constant.
+  if (stepperIndex == 0) {
+
+    OCR3A = ocr_reg_table[steppers[stepperIndex].pulses];
+    TCNT3 = 0;
+
+  }
+  else if (stepperIndex == 1) {
+
+    OCR4A = ocr_reg_table[steppers[stepperIndex].pulses];
+    TCNT4 = 0;
+
+  }
+  else{
+
+    Serial.print("Stepper index out of bound. \n");
+
+  }
 }
 
 // --------------------------- End of static member functions.
@@ -95,37 +151,51 @@ Stepper::Stepper() {
 
 }
 
-void Stepper::attach(uint8_t pin) {
-  pinMode(pin, OUTPUT);
+void Stepper::attach(uint8_t pulseOutPin, uint8_t directionOutPin) {
+  pinMode(pulseOutPin, OUTPUT);
 
-  steppers[this->stepperIndex].stepper_pin = pin;
+  steppers[this->stepperIndex].pulsePin = pulseOutPin;
+  steppers[this->stepperIndex].directionPin = directionOutPin;
 
-  Serial.print("Created stepper \n");
+  // Set the motor to run state
+  steppers[this->stepperIndex].motorState = State::run;
 
-  Init_ISR();
+  if (this->stepperIndex == 0){
+    Init_Timer3_ISR();
+  }
+  else if (this->stepperIndex == 1){
+    Init_Timer4_ISR();
+  }
+  else{
+    Serial.print("Only supports 2 stepper motors.\n");
+  }
+
 }
 
 void Stepper::home_axis(bool homing_sensor){
+
   if (homing_sensor){
     // TODO Check the travelled distance variable.
-    steppers[this->stepperIndex].actual_position = 0;
+    steppers[this->stepperIndex].actualPosition = 0;
   }
+
 }
 
-void Stepper::set_speed(uint16_t speed) {
+void Stepper::setRpm(uint16_t speed) {
+
+  // Set the motor to run state
+  if (steppers[this->stepperIndex].motorState != State::run){
+    steppers[this->stepperIndex].motorState = State::run;
+  }
+
   steppers[this->stepperIndex].pulses = speed;
 
-  // // Vary OCR2A register value and set external pin toggle upon OC2A match
-  // float speed_param = (float)speed / 10;
-  // float pulse_freq = (float)((speed_param * 80) / 3); // 1600 is micro stepping and 60 is to calculate per second.
-  // double reg_value = (double)((1000000 / pulse_freq) - 1);
-  // OCR2A = (uint16_t)reg_value;
+}
 
-  //speedSetValue = speed;
-  // cli();
-  // TCNT3 = 0;
-  // OCR3A = (uint16_t) ocr_reg_table[speed];
-  // sei();
+void Stepper::stop(){
+
+  steppers[stepperIndex].motorState = State::stop; 
+
 }
 
 void Stepper::move_absolute(uint16_t target_position) {

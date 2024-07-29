@@ -115,8 +115,8 @@ void setup()
   attachInterrupt(digitalPinToInterrupt(X_POS_LIM_SW), x_pos_lim_interrupt, CHANGE);
   attachInterrupt(digitalPinToInterrupt(X_NEG_LIM_SW), x_neg_lim_interrupt, CHANGE);
 
-  x_stepper.attach(PULSE_MOTOR_A);
-  y_stepper.attach(PULSE_MOTOR_B);
+  x_stepper.attach(PULSE_MOTOR_A, DIR_MOTOR_A);
+  y_stepper.attach(PULSE_MOTOR_B, DIR_MOTOR_B);
 
   // grabber_servo.attach(7);
 
@@ -134,26 +134,21 @@ void loop(){
       //digitalWrite(PULSE_MOTOR_A, LOW);
       //digitalWrite(PULSE_MOTOR_B, LOW);
 
-      digitalWrite(DIR_MOTOR_A, HIGH);
-      digitalWrite(DIR_MOTOR_B, HIGH);
-
-      y_stepper.set_speed(50);
-
       // Motor speed increasing
       for(int n = 1; n < 299; n++){
-        x_stepper.set_speed(n);
-        y_stepper.set_speed(n);  
+        x_stepper.setRpm(n);
+        y_stepper.setRpm(n);  
 
-         delay(1000);
+         delay(50);
       }
 
+      y_stepper.stop(); // 
       
       for(int n = 299; n > 1; n--){
-        x_stepper.set_speed(n);
-        y_stepper.set_speed(n); // 
-
-        delay(1000);
+        x_stepper.setRpm(n);
+        delay(50);
       }
+
 
       //grabber_servo.write(150);
 
@@ -188,10 +183,6 @@ void initialize_robot(){
   // Enable motors
   digitalWrite(ENABLE_MOTOR_A, HIGH);
   digitalWrite(ENABLE_MOTOR_B, HIGH);
-
-  // Rotation directions -> Must be set in
-  digitalWrite(DIR_MOTOR_A, HIGH);
-  digitalWrite(DIR_MOTOR_B, HIGH);
 
 }
 
