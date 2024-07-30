@@ -13,8 +13,10 @@ Runs using Timer 2
 #define F_PULSE 400           // 
 #define TIMER3_PRE_SCALER 64  // Change to 8 -> 64
 
-#define MAX_STEPPERS 2
+#define MAX_STEPPERS 3
 #define INVALID_STEPPER 255
+
+#define PULSES_PER_REV 1600
 
 #define DEFAULT_RPM 6
 
@@ -23,8 +25,8 @@ void Init_Timer4_ISR();
 void StepperHandler(int stepperIndex);
 
 typedef enum {
-  forward = false,
-  reverse = true
+  forward = true,
+  reverse = false
 } Direction;
 
 typedef enum {
@@ -32,18 +34,26 @@ typedef enum {
   run = true
 } State;
 
+typedef enum{
+  timer3 = 0,
+  timer4 = 1,
+  timer5 = 2
+} Timers;
+
 typedef struct {
   // Hardware pins
   volatile uint8_t pulsePin;
   volatile uint8_t directionPin;
+  Timers timer;
 
   // Stepper turning direction.
   volatile Direction turnDirection;
   volatile State motorState;
-  volatile float encoderScale;
+  volatile uint8_t teethCount;
   volatile uint16_t actualPosition;
   volatile uint16_t pulses;
-  volatile uint16_t tickCount;
+  volatile uint32_t targetTickCount;
+  volatile uint32_t currentTickCount;
 } stepper_t;
 
 class Stepper {
@@ -52,8 +62,8 @@ class Stepper {
     void attach(uint8_t pulseOutPin, uint8_t directionOutPin);
     void stop();
     void setRpm(uint16_t speed);
-    void setEncoderScaleFactor(float encoderScaleFactor);
-    void move_absolute(uint16_t target_position);
+    void setPulleyTeethCount(uint8_t teethCount);
+    void move_absolute(int target_position);
     void move_relative(uint16_t target_position);
     void home_axis(bool homing_sensor);
 

@@ -1,5 +1,5 @@
 /*
-
+  This library uses Timer 3, 4 & 5 for stepper motor control depending on the availability.
 */
 
 #include "tb6600_stepper.h"
@@ -76,6 +76,32 @@ void Init_Timer4_ISR() {
   sei();
 }
 
+void Init_Timer5_ISR() {
+  cli();
+
+  // Clear Timer5 Control Register
+  TCCR5A = 0;
+  TCCR5B = 0;
+  
+  TCNT5 = 0;
+
+  // Timer5 Interrupt Flag Register
+  TIFR5 |= (0 << TOV5);
+
+  // Clock source
+  TCCR5B |= (1 << CS51) | (1 << CS50);   // Clk / 64 from prescaler
+  TCCR5B |= (1 << WGM52);  //
+
+  // uint32_t reg_value = (uint32_t)(F_OSC / (16 * F_PULSE)) - 1;
+  OCR5A = 155;        // Initializing to a default value
+
+  // Timer Interrupt Mask Register
+  TIMSK5 |= (1 << OCIE5A);  // Timer compare interrupt
+  TIMSK5 |= (1 << TOIE5);  // Timer overflow interrupt
+
+  sei();
+}
+
 ISR(TIMER3_OVF_vect) {
   // Clear the interrupt flag.
   TIFR3 |= (0 << TOV3);
@@ -84,6 +110,11 @@ ISR(TIMER3_OVF_vect) {
 ISR(TIMER4_OVF_vect) {
   // Clear the interrupt flag.
   TIFR4 |= (0 << TOV4);
+}
+
+ISR(TIMER5_OVF_vect) {
+  // Clear the interrupt flag.
+  TIFR5 |= (0 << TOV5);
 }
 
 ISR(TIMER3_COMPA_vect) {
@@ -103,38 +134,37 @@ ISR(TIMER4_COMPA_vect) {
   sei();
 }
 
+ISR(TIMER5_COMPA_vect) {
+
+  cli();
+
+  StepperHandler(2);            // Index 1 always use Timer 4.
+
+  sei();
+}
+
 void StepperHandler(int stepperIndex) {
 
   // Toggle the pin
   if (steppers[stepperIndex].motorState == State::stop){
-
     digitalWrite(steppers[stepperIndex].pulsePin, LOW);
-
   }
   else{
-
     digitalWrite(steppers[stepperIndex].pulsePin, !digitalRead(steppers[stepperIndex].pulsePin));
-
   }
 
-
-  // Setting the speed by varying output pulse duration with counting. OCR2A register value stays constant.
-  if (stepperIndex == 0) {
-
+  // Set OCRnA register
+  if(steppers[stepperIndex].timer == Timers:: timer3){
     OCR3A = ocr_reg_table[steppers[stepperIndex].pulses];
     TCNT3 = 0;
-
-  }
-  else if (stepperIndex == 1) {
-
+  } 
+  else if(steppers[stepperIndex].timer == Timers:: timer4){
     OCR4A = ocr_reg_table[steppers[stepperIndex].pulses];
     TCNT4 = 0;
-
   }
-  else{
-
-    Serial.print("Stepper index out of bound. \n");
-
+  else if(steppers[stepperIndex].timer == Timers:: timer5){
+    OCR5A = ocr_reg_table[steppers[stepperIndex].pulses];
+    TCNT5 = 0;
   }
 }
 
@@ -161,15 +191,25 @@ void Stepper::attach(uint8_t pulseOutPin, uint8_t directionOutPin) {
   steppers[this->stepperIndex].motorState = State::run;
 
   if (this->stepperIndex == 0){
+    steppers[this->stepperIndex].timer = Timers::timer3;
     Init_Timer3_ISR();
   }
   else if (this->stepperIndex == 1){
+    steppers[this->stepperIndex].timer = Timers::timer4;
     Init_Timer4_ISR();
   }
+  else if (this->stepperIndex == 2){
+    steppers[this->stepperIndex].timer = Timers::timer5;
+    Init_Timer5_ISR();
+  }
   else{
-    Serial.print("Only supports 2 stepper motors.\n");
+    Serial.print("Only supports 3 stepper motors.\n");
   }
 
+}
+
+void Stepper::setPulleyTeethCount(uint8_t teethCount){
+  steppers[this->stepperIndex].teethCount = teethCount;
 }
 
 void Stepper::home_axis(bool homing_sensor){
@@ -198,8 +238,27 @@ void Stepper::stop(){
 
 }
 
-void Stepper::move_absolute(uint16_t target_position) {
-  
+void Stepper::move_absolute(int target_position) {
+
+  if(steppers[this->stepperIndex].teethCount > 0){
+    // Distance = tooth pitch x number of teeth
+    double distancePerRev = 2 * steppers[this->stepperIndex].teethCount;
+
+    double targetDistance = target_position - steppers[this->stepperIndex].actualPosition;
+    double pulsesRequired = abs((targetDistance * PULSES_PER_REV) / distancePerRev);
+
+    if (targetDistance > 0){
+      steppers[this->stepperIndex].turnDirection = Direction::forward;
+
+    }
+    else{
+      steppers[this->stepperIndex].turnDirection = Direction::reverse;
+
+    }
+
+    steppers[this->stepperIndex].targetTickCount = (uint32_t)pulsesRequired;
+  }
+
 }
 
 void Stepper::move_relative(uint16_t target_position) {
