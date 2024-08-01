@@ -149,23 +149,29 @@ void StepperHandler(int stepperIndex) {
   if (steppers[stepperIndex].motorState == State::stop){
     digitalWrite(steppers[stepperIndex].pulsePin, LOW);
   }
-  else{
+  else if (steppers[stepperIndex].motorState == State::run){
+    if(steppers[stepperIndex].modeOfOperation == OpMode::velocity){
+      // Set OCRnA register
+      if(steppers[stepperIndex].timer == Timers:: timer3){
+        OCR3A = ocr_reg_table[steppers[stepperIndex].pulses];
+        TCNT3 = 0;
+      } 
+      else if(steppers[stepperIndex].timer == Timers:: timer4){
+        OCR4A = ocr_reg_table[steppers[stepperIndex].pulses];
+        TCNT4 = 0;
+      }
+      else if(steppers[stepperIndex].timer == Timers:: timer5){
+        OCR5A = ocr_reg_table[steppers[stepperIndex].pulses];
+        TCNT5 = 0;
+      }
+    }
+    else if(steppers[stepperIndex].modeOfOperation == OpMode::position){
+      steppers[stepperIndex].currentTickCount += 1;
+    }
     digitalWrite(steppers[stepperIndex].pulsePin, !digitalRead(steppers[stepperIndex].pulsePin));
+
   }
 
-  // Set OCRnA register
-  if(steppers[stepperIndex].timer == Timers:: timer3){
-    OCR3A = ocr_reg_table[steppers[stepperIndex].pulses];
-    TCNT3 = 0;
-  } 
-  else if(steppers[stepperIndex].timer == Timers:: timer4){
-    OCR4A = ocr_reg_table[steppers[stepperIndex].pulses];
-    TCNT4 = 0;
-  }
-  else if(steppers[stepperIndex].timer == Timers:: timer5){
-    OCR5A = ocr_reg_table[steppers[stepperIndex].pulses];
-    TCNT5 = 0;
-  }
 }
 
 // --------------------------- End of static member functions.
@@ -221,15 +227,15 @@ void Stepper::home_axis(bool homing_sensor){
 
 }
 
-void Stepper::setRpm(uint16_t speed) {
+void Stepper::setRpm(float rpm) {
 
   // Set the motor to run state
   if (steppers[this->stepperIndex].motorState != State::run){
     steppers[this->stepperIndex].motorState = State::run;
   }
 
-  steppers[this->stepperIndex].pulses = speed;
-
+  steppers[this->stepperIndex].pulses = rpm;
+  steppers[this->stepperIndex].modeOfOperation = OpMode::velocity;
 }
 
 void Stepper::stop(){

@@ -30,9 +30,15 @@ typedef enum {
 } Direction;
 
 typedef enum {
-  stop = false,
-  run = true
+  stop = 0,
+  run = 1,
+  error = 2
 } State;
+
+typedef enum {
+  velocity = 0,
+  position = 1
+} OpMode;
 
 typedef enum{
   timer3 = 0,
@@ -48,6 +54,7 @@ typedef struct {
 
   // Stepper turning direction.
   volatile Direction turnDirection;
+  volatile OpMode modeOfOperation;
   volatile State motorState;
   volatile uint8_t teethCount;
   volatile uint16_t actualPosition;
@@ -61,7 +68,7 @@ class Stepper {
     Stepper();
     void attach(uint8_t pulseOutPin, uint8_t directionOutPin);
     void stop();
-    void setRpm(uint16_t speed);
+    void setRpm(float rpm);
     void setPulleyTeethCount(uint8_t teethCount);
     void move_absolute(int target_position);
     void move_relative(uint16_t target_position);
