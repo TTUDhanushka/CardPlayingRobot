@@ -118,6 +118,9 @@ void setup()
   x_stepper.attach(PULSE_MOTOR_A, DIR_MOTOR_A);
   y_stepper.attach(PULSE_MOTOR_B, DIR_MOTOR_B);
 
+
+  x_stepper.setPulleyTeethCount(60);
+  y_stepper.setPulleyTeethCount(60);
   // grabber_servo.attach(7);
 
 }
@@ -134,21 +137,24 @@ void loop(){
       //digitalWrite(PULSE_MOTOR_A, LOW);
       //digitalWrite(PULSE_MOTOR_B, LOW);
 
-      // Motor speed increasing
-      for(int n = 1; n < 299; n++){
-        x_stepper.setRpm(n);
-        y_stepper.setRpm(n);  
+      //---------------------- Motor speed increasing --------------------------------------
+      // for(int n = 1; n < 299; n++){
+      //   x_stepper.setRpm(n);
+      //   y_stepper.setRpm(n);  
 
-         delay(50);
-      }
+      //    delay(50);
+      // }
 
-      y_stepper.stop(); // 
+      // y_stepper.stop(); // 
       
-      for(int n = 299; n > 1; n--){
-        x_stepper.setRpm(n);
-        delay(50);
-      }
+      // for(int n = 299; n > 1; n--){
+      //   x_stepper.setRpm(n);
+      //   delay(50);
+      // }
 
+// ------------------ ABsolute position control
+        x_stepper.move_absolute(240, 250);
+        // y_stepper.move_absolute(180, 50);  
 
       //grabber_servo.write(150);
 

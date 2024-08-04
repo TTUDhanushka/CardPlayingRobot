@@ -11,14 +11,14 @@ Runs using Timer 2
 
 #define F_OSC 16000000        // Clock of the arduino
 #define F_PULSE 400           // 
-#define TIMER3_PRE_SCALER 64  // Change to 8 -> 64
+// #define TIMER3_PRE_SCALER 64  // Change to 8 -> 64
 
 #define MAX_STEPPERS 3
 #define INVALID_STEPPER 255
 
 #define PULSES_PER_REV 1600
 
-#define DEFAULT_RPM 6
+// #define DEFAULT_RPM 6
 
 void Init_Timer3_ISR();
 void Init_Timer4_ISR();
@@ -70,7 +70,7 @@ class Stepper {
     void stop();
     void setRpm(float rpm);
     void setPulleyTeethCount(uint8_t teethCount);
-    void move_absolute(int target_position);
+    void move_absolute(int target_position, float rpm);
     void move_relative(uint16_t target_position);
     void home_axis(bool homing_sensor);
 

@@ -164,11 +164,36 @@ void StepperHandler(int stepperIndex) {
         OCR5A = ocr_reg_table[steppers[stepperIndex].pulses];
         TCNT5 = 0;
       }
+
+      digitalWrite(steppers[stepperIndex].pulsePin, !digitalRead(steppers[stepperIndex].pulsePin));
     }
     else if(steppers[stepperIndex].modeOfOperation == OpMode::position){
-      steppers[stepperIndex].currentTickCount += 1;
+
+      // Set OCRnA register
+      if(steppers[stepperIndex].timer == Timers:: timer3){
+        OCR3A = ocr_reg_table[steppers[stepperIndex].pulses];
+        TCNT3 = 0;
+      } 
+      else if(steppers[stepperIndex].timer == Timers:: timer4){
+        OCR4A = ocr_reg_table[steppers[stepperIndex].pulses];
+        TCNT4 = 0;
+      }
+      else if(steppers[stepperIndex].timer == Timers:: timer5){
+        OCR5A = ocr_reg_table[steppers[stepperIndex].pulses];
+        TCNT5 = 0;
+      }
+
+      if (steppers[stepperIndex].targetTickCount > steppers[stepperIndex].currentTickCount){
+        steppers[stepperIndex].motorState == State::run;
+        steppers[stepperIndex].currentTickCount += 1;
+        digitalWrite(steppers[stepperIndex].pulsePin, !digitalRead(steppers[stepperIndex].pulsePin));
+      }
+      else{
+        steppers[stepperIndex].motorState == State::stop;
+      }
+
     }
-    digitalWrite(steppers[stepperIndex].pulsePin, !digitalRead(steppers[stepperIndex].pulsePin));
+
 
   }
 
@@ -244,14 +269,24 @@ void Stepper::stop(){
 
 }
 
-void Stepper::move_absolute(int target_position) {
+
+/*
+Function: Move absolute 
+
+param target_position: (int) Target absolute positioin refering to the origin. The motor needs to be homed.
+param rpm: (float) Reference rpm 
+*/
+void Stepper::move_absolute(int target_position, float rpm) {
+
+  steppers[this->stepperIndex].modeOfOperation = OpMode::position;
 
   if(steppers[this->stepperIndex].teethCount > 0){
+
     // Distance = tooth pitch x number of teeth
     double distancePerRev = 2 * steppers[this->stepperIndex].teethCount;
 
     double targetDistance = target_position - steppers[this->stepperIndex].actualPosition;
-    double pulsesRequired = abs((targetDistance * PULSES_PER_REV) / distancePerRev);
+    double pulsesRequired = abs((2 * targetDistance * PULSES_PER_REV) / distancePerRev);          // Because timer counts both rising and falling edges.
 
     if (targetDistance > 0){
       steppers[this->stepperIndex].turnDirection = Direction::forward;
@@ -263,9 +298,16 @@ void Stepper::move_absolute(int target_position) {
     }
 
     steppers[this->stepperIndex].targetTickCount = (uint32_t)pulsesRequired;
+
+    // Reference rpm.
+    steppers[this->stepperIndex].pulses = rpm;
   }
 
 }
 
+/*
+Function: Move Relative
+*/
 void Stepper::move_relative(uint16_t target_position) {
+  
 }
