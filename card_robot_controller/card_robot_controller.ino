@@ -70,10 +70,6 @@ void setup_io_ports(){
   pinMode(DIR_MOTOR_A, OUTPUT);
   pinMode(DIR_MOTOR_B, OUTPUT);
 
-  // // Setup pulse out pins
-  // pinMode(PULSE_MOTOR_A, OUTPUT);
-  // pinMode(PULSE_MOTOR_B, OUTPUT);
-
   // Setup eletro magnet for grabbing
   // pinMode(ATTACHER, OUTPUT);
 
@@ -138,22 +134,36 @@ void loop(){
       //digitalWrite(PULSE_MOTOR_B, LOW);
 
       //---------------------- Motor speed increasing --------------------------------------
-      // for(int n = 1; n < 299; n++){
-      //   x_stepper.setRpm(n);
-      //   y_stepper.setRpm(n);  
+      for(int n = 1; n < 299; n++){
+        x_stepper.setRpm(n, Direction::forward);
+        // y_stepper.setRpm(n);  
 
-      //    delay(50);
-      // }
+         delay(50);
+      }
 
-      // y_stepper.stop(); // 
+      y_stepper.stop(); // 
       
-      // for(int n = 299; n > 1; n--){
-      //   x_stepper.setRpm(n);
-      //   delay(50);
-      // }
+      for(int n = 299; n > 1; n--){
+        x_stepper.setRpm(n, Direction::forward);
+        delay(50);
+      }
+
+      for(int n = 1; n < 299; n++){
+        x_stepper.setRpm(n, Direction::reverse);
+        // y_stepper.setRpm(n);  
+
+         delay(50);
+      }
+
+      y_stepper.stop(); // 
+      
+      for(int n = 299; n > 1; n--){
+        x_stepper.setRpm(n, Direction::reverse);
+        delay(50);
+      }
 
 // ------------------ ABsolute position control
-        x_stepper.move_absolute(240, 250);
+        //x_stepper.move_absolute(240, 250);
         // y_stepper.move_absolute(180, 50);  
 
       //grabber_servo.write(150);

@@ -143,6 +143,10 @@ ISR(TIMER5_COMPA_vect) {
   sei();
 }
 
+void update_timer_register(int timerId, float speed){
+
+}
+
 void StepperHandler(int stepperIndex) {
 
   // Toggle the pin
@@ -166,6 +170,14 @@ void StepperHandler(int stepperIndex) {
       }
 
       digitalWrite(steppers[stepperIndex].pulsePin, !digitalRead(steppers[stepperIndex].pulsePin));
+
+      if (steppers[stepperIndex].turnDirection == Direction::forward){
+        digitalWrite(steppers[stepperIndex].directionPin, HIGH);
+      }
+      else{
+        digitalWrite(steppers[stepperIndex].directionPin, LOW);
+      }
+
     }
     else if(steppers[stepperIndex].modeOfOperation == OpMode::position){
 
@@ -252,7 +264,7 @@ void Stepper::home_axis(bool homing_sensor){
 
 }
 
-void Stepper::setRpm(float rpm) {
+void Stepper::setRpm(float rpm, Direction direction) {
 
   // Set the motor to run state
   if (steppers[this->stepperIndex].motorState != State::run){
@@ -260,11 +272,17 @@ void Stepper::setRpm(float rpm) {
   }
 
   steppers[this->stepperIndex].pulses = rpm;
+  steppers[this->stepperIndex].turnDirection = direction;
   steppers[this->stepperIndex].modeOfOperation = OpMode::velocity;
 }
 
-void Stepper::stop(){
+/*
+Function: stop
 
+Abruptly stop
+*/
+void Stepper::stop(){
+  
   steppers[stepperIndex].motorState = State::stop; 
 
 }
@@ -310,4 +328,12 @@ Function: Move Relative
 */
 void Stepper::move_relative(uint16_t target_position) {
   
+}
+
+void home_axis(uint8_t homing_sensor_input){
+  bool sensor_status = digitalRead(homing_sensor_input);
+
+  if (sensor_status){
+    steppers[this->stepperIndex].motorState = State::stop;
+  }
 }

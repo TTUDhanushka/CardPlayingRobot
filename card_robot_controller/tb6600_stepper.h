@@ -11,14 +11,12 @@ Runs using Timer 2
 
 #define F_OSC 16000000        // Clock of the arduino
 #define F_PULSE 400           // 
-// #define TIMER3_PRE_SCALER 64  // Change to 8 -> 64
 
 #define MAX_STEPPERS 3
 #define INVALID_STEPPER 255
 
 #define PULSES_PER_REV 1600
 
-// #define DEFAULT_RPM 6
 
 void Init_Timer3_ISR();
 void Init_Timer4_ISR();
@@ -37,7 +35,9 @@ typedef enum {
 
 typedef enum {
   velocity = 0,
-  position = 1
+  position = 1, 
+  cyclic_position = 2,
+  homing = 4
 } OpMode;
 
 typedef enum{
@@ -50,14 +50,16 @@ typedef struct {
   // Hardware pins
   volatile uint8_t pulsePin;
   volatile uint8_t directionPin;
+
+  // Hardware timer
   Timers timer;
 
-  // Stepper turning direction.
+  // Status variables
   volatile Direction turnDirection;
   volatile OpMode modeOfOperation;
   volatile State motorState;
   volatile uint8_t teethCount;
-  volatile uint16_t actualPosition;
+  volatile uint16_t actualPosition;         // In mm.
   volatile uint16_t pulses;
   volatile uint32_t targetTickCount;
   volatile uint32_t currentTickCount;
@@ -68,11 +70,11 @@ class Stepper {
     Stepper();
     void attach(uint8_t pulseOutPin, uint8_t directionOutPin);
     void stop();
-    void setRpm(float rpm);
+    void setRpm(float rpm, Direction direction);
     void setPulleyTeethCount(uint8_t teethCount);
     void move_absolute(int target_position, float rpm);
     void move_relative(uint16_t target_position);
-    void home_axis(bool homing_sensor);
+    void home_axis(uint8_t homing_sensor_input);
 
   private:
     uint8_t stepperIndex;
