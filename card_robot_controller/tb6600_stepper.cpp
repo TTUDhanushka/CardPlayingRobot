@@ -11,7 +11,7 @@ volatile uint16_t speedSetValue = 0;
 
 static stepper_t steppers[MAX_STEPPERS];
 
-uint16_t ocr_reg_table[300] = {50000, 46874, 23437, 15624, 11718, 9374, 7812, 6695, 5858, 5207, 4687, 4260, 3905, 3605, 3347, 3124, 2929, 2756, 2603, 2466, 2343, 2231,
+uint16_t ocr_reg_table[300] = {15000, 11718, 5858, 3905, 2929, 2343, 1952, 1673, 1464, 1301, 4687, 4260, 3905, 3605, 3347, 3124, 2929, 2756, 2603, 2466, 2343, 2231,
                                 2130, 2037, 1952, 1874, 1802, 1735, 1673, 1615, 1562, 1511, 1464, 1419, 1378, 1338, 1301, 1266, 1233, 1201, 1171, 1142, 1115, 1089, 1064, 
                                 1041, 1018, 996, 976, 956, 937, 918, 900, 883, 867, 851, 836, 821, 807, 793, 780, 767, 755, 743, 731, 720, 709, 699, 688, 678, 669, 659, 
                                 650, 641, 632, 624, 616, 608, 600, 592, 585, 578, 571, 564, 557, 550, 544, 538, 532, 526, 520, 514, 509, 503, 498, 492, 487, 482, 477, 
@@ -143,8 +143,79 @@ ISR(TIMER5_COMPA_vect) {
   sei();
 }
 
-void update_timer_register(int timerId, float speed){
+void update_timer_register(Timers timerId, float speed){
 
+  // Speed (rpm) multiplied by 10 to set range 0 - 299 OCR registry array indices.
+  int speedToFreqIndx = (int)speed * 10;
+
+  switch(timerId){
+    case Timers::timer3:
+
+      if (speedToFreqIndx < 10){
+
+        // Clear registry bits.
+        TCCR3B |= (0 << CS32) |(0 << CS31) | (0 << CS30);
+
+        TCCR3B |= (1 << CS32);   // Clk / 256 from prescaler 
+
+      }
+      else{
+        
+        // Clear registry bits.
+        TCCR3B |= (0 << CS32) |(0 << CS31) | (0 << CS30);
+
+        TCCR3B |= (1 << CS31) | (1 << CS30);   // Clk / 64 from prescaler
+
+      }
+
+      OCR3A = ocr_reg_table[speedToFreqIndx]; 
+
+    break;
+
+    case Timers::timer4:
+
+      if (speedToFreqIndx < 10){
+
+        // Clear registry bits.
+        TCCR4B |= (0 << CS42) |(0 << CS41) | (0 << CS40);
+
+        TCCR4B |= (1 << CS42);   // Clk / 256 from prescaler 
+
+      }
+      else{
+        
+        // Clear registry bits.
+        TCCR4B |= (0 << CS42) |(0 << CS41) | (0 << CS40);
+
+        TCCR4B |= (1 << CS41) | (1 << CS40);   // Clk / 64 from prescaler
+
+      }
+
+      OCR4A = ocr_reg_table[speedToFreqIndx]; 
+    break;
+
+    case Timers::timer5:
+
+      if (speedToFreqIndx < 10){
+
+        // Clear registry bits.
+        TCCR5B |= (0 << CS52) |(0 << CS51) | (0 << CS50);
+
+        TCCR5B |= (1 << CS52);   // Clk / 256 from prescaler 
+
+      }
+      else{
+        
+        // Clear registry bits.
+        TCCR5B |= (0 << CS52) |(0 << CS51) | (0 << CS50);
+
+        TCCR5B |= (1 << CS51) | (1 << CS50);   // Clk / 64 from prescaler
+
+      }
+
+      OCR5A = ocr_reg_table[speedToFreqIndx]; 
+    break;
+  }
 }
 
 void StepperHandler(int stepperIndex) {
