@@ -133,35 +133,36 @@ void loop(){
       //digitalWrite(PULSE_MOTOR_A, LOW);
       //digitalWrite(PULSE_MOTOR_B, LOW);
 
-      //---------------------- Motor speed increasing --------------------------------------
-      for(int n = 1; n < 299; n++){
-        x_stepper.setRpm(n, Direction::forward);
-        // y_stepper.setRpm(n);  
+      // //---------------------- Motor speed increasing --------------------------------------
+      // for(int n = 0; n < 299; n++){
+      //   x_stepper.setRpm(n/10, Direction::forward);
+      //   // y_stepper.setRpm(n);  
 
-         delay(50);
-      }
+      //    delay(50);
+      // }
 
-      y_stepper.stop(); // 
+      // // y_stepper.stop(); // 
       
-      for(int n = 299; n > 1; n--){
-        x_stepper.setRpm(n, Direction::forward);
-        delay(50);
-      }
+      // for(int n = 299; n > 0; n--){
+      //   x_stepper.setRpm(n/10, Direction::forward);
+      //   delay(50);
+      // }
 
-      for(int n = 1; n < 299; n++){
-        x_stepper.setRpm(n, Direction::reverse);
-        // y_stepper.setRpm(n);  
+      // for(int n = 0; n < 299; n++){
+      //   x_stepper.setRpm(n/10, Direction::reverse);
+      //   // y_stepper.setRpm(n);  
 
-         delay(50);
-      }
+      //    delay(50);
+      // }
 
-      y_stepper.stop(); // 
+      // // y_stepper.stop(); // 
       
-      for(int n = 299; n > 1; n--){
-        x_stepper.setRpm(n, Direction::reverse);
+      // for(int n = 299; n > 0; n--){
+      //   x_stepper.setRpm(n/10, Direction::reverse);
+      //   delay(50);
+      // }
+        x_stepper.setRpm(1, Direction::reverse);        // Can't handle floating points below 1.0
         delay(50);
-      }
-
 // ------------------ ABsolute position control
         //x_stepper.move_absolute(240, 250);
         // y_stepper.move_absolute(180, 50);  

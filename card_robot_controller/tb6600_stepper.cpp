@@ -11,7 +11,7 @@ volatile uint16_t speedSetValue = 0;
 
 static stepper_t steppers[MAX_STEPPERS];
 
-uint16_t ocr_reg_table[300] = {15000, 11718, 5858, 3905, 2929, 2343, 1952, 1673, 1464, 1301, 4687, 4260, 3905, 3605, 3347, 3124, 2929, 2756, 2603, 2466, 2343, 2231,
+uint16_t ocr_reg_table[300] = {11718, 11718, 5858, 3905, 2929, 2343, 1952, 1673, 1464, 1301, 4687, 4260, 3905, 3605, 3347, 3124, 2929, 2756, 2603, 2466, 2343, 2231,
                                 2130, 2037, 1952, 1874, 1802, 1735, 1673, 1615, 1562, 1511, 1464, 1419, 1378, 1338, 1301, 1266, 1233, 1201, 1171, 1142, 1115, 1089, 1064, 
                                 1041, 1018, 996, 976, 956, 937, 918, 900, 883, 867, 851, 836, 821, 807, 793, 780, 767, 755, 743, 731, 720, 709, 699, 688, 678, 669, 659, 
                                 650, 641, 632, 624, 616, 608, 600, 592, 585, 578, 571, 564, 557, 550, 544, 538, 532, 526, 520, 514, 509, 503, 498, 492, 487, 482, 477, 
@@ -41,7 +41,7 @@ void Init_Timer3_ISR() {
   TCCR3B |= (1 << WGM32);  //| (1 << WGM13)
 
   // uint32_t reg_value = (uint32_t)(F_OSC / (16 * F_PULSE)) - 1;
-  OCR3A = 155;        // Initializing to a default value
+  OCR3A = F_PULSE;        // Initializing to a default value
 
   // Timer Interrupt Mask Register
   TIMSK3 |= (1 << OCIE3A);  // Timer compare interrupt
@@ -67,7 +67,7 @@ void Init_Timer4_ISR() {
   TCCR4B |= (1 << WGM42);  //
 
   // uint32_t reg_value = (uint32_t)(F_OSC / (16 * F_PULSE)) - 1;
-  OCR4A = 155;        // Initializing to a default value
+  OCR4A = F_PULSE;        // Initializing to a default value
 
   // Timer Interrupt Mask Register
   TIMSK4 |= (1 << OCIE4A);  // Timer compare interrupt
@@ -93,7 +93,7 @@ void Init_Timer5_ISR() {
   TCCR5B |= (1 << WGM52);  //
 
   // uint32_t reg_value = (uint32_t)(F_OSC / (16 * F_PULSE)) - 1;
-  OCR5A = 155;        // Initializing to a default value
+  OCR5A = F_PULSE;        // Initializing to a default value
 
   // Timer Interrupt Mask Register
   TIMSK5 |= (1 << OCIE5A);  // Timer compare interrupt
@@ -143,77 +143,83 @@ ISR(TIMER5_COMPA_vect) {
   sei();
 }
 
-void update_timer_register(Timers timerId, float speed){
+void update_timer_register(Timers timerId, double speed){
 
-  // Speed (rpm) multiplied by 10 to set range 0 - 299 OCR registry array indices.
-  int speedToFreqIndx = (int)speed * 10;
+  int speedToFreqIndx = (int)speed;
 
   switch(timerId){
+
     case Timers::timer3:
+      
+      // Clear timer 3 control registry bits.      
+      TCCR3B = 0;
 
       if (speedToFreqIndx < 10){
 
-        // Clear registry bits.
-        TCCR3B |= (0 << CS32) |(0 << CS31) | (0 << CS30);
-
         TCCR3B |= (1 << CS32);   // Clk / 256 from prescaler 
-
+        TCCR3B |= (1 << WGM32);  //| (1 << WGM13)
       }
       else{
-        
-        // Clear registry bits.
-        TCCR3B |= (0 << CS32) |(0 << CS31) | (0 << CS30);
 
         TCCR3B |= (1 << CS31) | (1 << CS30);   // Clk / 64 from prescaler
-
+        TCCR3B |= (1 << WGM32);  //| (1 << WGM13)
       }
 
       OCR3A = ocr_reg_table[speedToFreqIndx]; 
+
+      // Clear the registry count.
+      TCNT3 = 0;
 
     break;
 
     case Timers::timer4:
 
+      // Clear timer 4 control registry bits.      
+      TCCR4B = 0;
+
       if (speedToFreqIndx < 10){
 
-        // Clear registry bits.
-        TCCR4B |= (0 << CS42) |(0 << CS41) | (0 << CS40);
-
         TCCR4B |= (1 << CS42);   // Clk / 256 from prescaler 
+        TCCR4B |= (1 << WGM42);
 
       }
       else{
-        
-        // Clear registry bits.
-        TCCR4B |= (0 << CS42) |(0 << CS41) | (0 << CS40);
 
         TCCR4B |= (1 << CS41) | (1 << CS40);   // Clk / 64 from prescaler
+        TCCR4B |= (1 << WGM42); 
 
       }
 
       OCR4A = ocr_reg_table[speedToFreqIndx]; 
+            
+      // Clear the registry count.
+      TCNT4 = 0;
+
     break;
 
     case Timers::timer5:
 
+      // Clear timer 5 control registry bits.      
+      TCCR5B = 0;
+
       if (speedToFreqIndx < 10){
 
-        // Clear registry bits.
-        TCCR5B |= (0 << CS52) |(0 << CS51) | (0 << CS50);
-
         TCCR5B |= (1 << CS52);   // Clk / 256 from prescaler 
+        TCCR5B |= (1 << WGM52);
 
       }
       else{
         
-        // Clear registry bits.
-        TCCR5B |= (0 << CS52) |(0 << CS51) | (0 << CS50);
-
         TCCR5B |= (1 << CS51) | (1 << CS50);   // Clk / 64 from prescaler
+        TCCR5B |= (1 << WGM52);
 
       }
 
       OCR5A = ocr_reg_table[speedToFreqIndx]; 
+
+      // Clear the registry count.
+      TCNT5 = 0;
+
     break;
   }
 }
@@ -226,20 +232,13 @@ void StepperHandler(int stepperIndex) {
   }
   else if (steppers[stepperIndex].motorState == State::run){
     if(steppers[stepperIndex].modeOfOperation == OpMode::velocity){
-      // Set OCRnA register
-      if(steppers[stepperIndex].timer == Timers:: timer3){
-        OCR3A = ocr_reg_table[steppers[stepperIndex].pulses];
-        TCNT3 = 0;
-      } 
-      else if(steppers[stepperIndex].timer == Timers:: timer4){
-        OCR4A = ocr_reg_table[steppers[stepperIndex].pulses];
-        TCNT4 = 0;
-      }
-      else if(steppers[stepperIndex].timer == Timers:: timer5){
-        OCR5A = ocr_reg_table[steppers[stepperIndex].pulses];
-        TCNT5 = 0;
+      
+      // Update timer control OCRnA registers.
+      if (steppers[stepperIndex].rpm > 0){
+        update_timer_register(steppers[stepperIndex].timer, steppers[stepperIndex].rpm);
       }
 
+      // Toggle the pulse pin.
       digitalWrite(steppers[stepperIndex].pulsePin, !digitalRead(steppers[stepperIndex].pulsePin));
 
       if (steppers[stepperIndex].turnDirection == Direction::forward){
@@ -252,31 +251,25 @@ void StepperHandler(int stepperIndex) {
     }
     else if(steppers[stepperIndex].modeOfOperation == OpMode::position){
 
-      // Set OCRnA register
-      if(steppers[stepperIndex].timer == Timers:: timer3){
-        OCR3A = ocr_reg_table[steppers[stepperIndex].pulses];
-        TCNT3 = 0;
-      } 
-      else if(steppers[stepperIndex].timer == Timers:: timer4){
-        OCR4A = ocr_reg_table[steppers[stepperIndex].pulses];
-        TCNT4 = 0;
-      }
-      else if(steppers[stepperIndex].timer == Timers:: timer5){
-        OCR5A = ocr_reg_table[steppers[stepperIndex].pulses];
-        TCNT5 = 0;
+      // Update timer control OCRnA registers.
+      if (steppers[stepperIndex].rpm > 0){
+        update_timer_register(steppers[stepperIndex].timer, steppers[stepperIndex].rpm);
       }
 
       if (steppers[stepperIndex].targetTickCount > steppers[stepperIndex].currentTickCount){
+
         steppers[stepperIndex].motorState == State::run;
         steppers[stepperIndex].currentTickCount += 1;
+
+        // Toggle the pulse pin.
         digitalWrite(steppers[stepperIndex].pulsePin, !digitalRead(steppers[stepperIndex].pulsePin));
+
       }
       else{
         steppers[stepperIndex].motorState == State::stop;
       }
 
     }
-
 
   }
 
@@ -326,25 +319,18 @@ void Stepper::setPulleyTeethCount(uint8_t teethCount){
   steppers[this->stepperIndex].teethCount = teethCount;
 }
 
-void Stepper::home_axis(bool homing_sensor){
 
-  if (homing_sensor){
-    // TODO Check the travelled distance variable.
-    steppers[this->stepperIndex].actualPosition = 0;
-  }
-
-}
-
-void Stepper::setRpm(float rpm, Direction direction) {
+void Stepper::setRpm(double rpm, Direction direction) {
 
   // Set the motor to run state
   if (steppers[this->stepperIndex].motorState != State::run){
     steppers[this->stepperIndex].motorState = State::run;
   }
 
-  steppers[this->stepperIndex].pulses = rpm;
+  steppers[this->stepperIndex].rpm = rpm;
   steppers[this->stepperIndex].turnDirection = direction;
   steppers[this->stepperIndex].modeOfOperation = OpMode::velocity;
+
 }
 
 /*
@@ -365,7 +351,7 @@ Function: Move absolute
 param target_position: (int) Target absolute positioin refering to the origin. The motor needs to be homed.
 param rpm: (float) Reference rpm 
 */
-void Stepper::move_absolute(int target_position, float rpm) {
+void Stepper::move_absolute(int target_position, double rpm) {
 
   steppers[this->stepperIndex].modeOfOperation = OpMode::position;
 
@@ -389,7 +375,7 @@ void Stepper::move_absolute(int target_position, float rpm) {
     steppers[this->stepperIndex].targetTickCount = (uint32_t)pulsesRequired;
 
     // Reference rpm.
-    steppers[this->stepperIndex].pulses = rpm;
+    steppers[this->stepperIndex].rpm = rpm;
   }
 
 }
@@ -401,10 +387,15 @@ void Stepper::move_relative(uint16_t target_position) {
   
 }
 
-void home_axis(uint8_t homing_sensor_input){
+void Stepper::home_axis(uint8_t homing_sensor_input){
   bool sensor_status = digitalRead(homing_sensor_input);
 
   if (sensor_status){
     steppers[this->stepperIndex].motorState = State::stop;
+  }
+
+  if (sensor_status){
+    // TODO Check the travelled distance variable.
+    steppers[this->stepperIndex].actualPosition = 0;
   }
 }

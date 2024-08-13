@@ -10,7 +10,7 @@ Runs using Timer 2
 #include <Arduino.h>
 
 #define F_OSC 16000000        // Clock of the arduino
-#define F_PULSE 400           // 
+#define F_PULSE 4687          // Should generate 1 rpm signal 
 
 #define MAX_STEPPERS 3
 #define INVALID_STEPPER 255
@@ -60,7 +60,7 @@ typedef struct {
   volatile State motorState;
   volatile uint8_t teethCount;
   volatile uint16_t actualPosition;         // In mm.
-  volatile uint16_t pulses;
+  volatile double rpm;
   volatile uint32_t targetTickCount;
   volatile uint32_t currentTickCount;
 } stepper_t;
@@ -70,9 +70,9 @@ class Stepper {
     Stepper();
     void attach(uint8_t pulseOutPin, uint8_t directionOutPin);
     void stop();
-    void setRpm(float rpm, Direction direction);
+    void setRpm(double rpm, Direction direction);
     void setPulleyTeethCount(uint8_t teethCount);
-    void move_absolute(int target_position, float rpm);
+    void move_absolute(int target_position, double rpm);
     void move_relative(uint16_t target_position);
     void home_axis(uint8_t homing_sensor_input);
 
