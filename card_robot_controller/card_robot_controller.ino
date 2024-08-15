@@ -161,8 +161,16 @@ void loop(){
       //   x_stepper.setRpm(n/10, Direction::reverse);
       //   delay(50);
       // }
-        x_stepper.setRpm(1, Direction::reverse);        // Can't handle floating points below 1.0
+        // x_stepper.setRpm(1, Direction::reverse);        // Can't handle floating points below 1.0
         delay(50);
+
+        if(!x_stepper.isHomed()){
+          x_stepper.home_axis(X_POS_LIM_SW);
+        }
+        else{
+          x_stepper.move_absolute(240, 20);
+        }
+
 // ------------------ ABsolute position control
         //x_stepper.move_absolute(240, 250);
         // y_stepper.move_absolute(180, 50);  

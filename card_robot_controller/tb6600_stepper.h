@@ -51,6 +51,8 @@ typedef struct {
   volatile uint8_t pulsePin;
   volatile uint8_t directionPin;
 
+  volatile bool homedStatus;
+
   // Hardware timer
   Timers timer;
 
@@ -75,6 +77,7 @@ class Stepper {
     void move_absolute(int target_position, double rpm);
     void move_relative(uint16_t target_position);
     void home_axis(uint8_t homing_sensor_input);
+    bool isHomed(void);
 
   private:
     uint8_t stepperIndex;

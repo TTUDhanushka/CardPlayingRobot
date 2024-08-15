@@ -259,7 +259,11 @@ void StepperHandler(int stepperIndex) {
       if (steppers[stepperIndex].targetTickCount > steppers[stepperIndex].currentTickCount){
 
         steppers[stepperIndex].motorState == State::run;
-        steppers[stepperIndex].currentTickCount += 1;
+
+        // Count the ticks when the pulse pin is HIGH. 
+        if (digitalRead(steppers[stepperIndex].pulsePin)){
+          steppers[stepperIndex].currentTickCount += 1;
+        }
 
         // Toggle the pulse pin.
         digitalWrite(steppers[stepperIndex].pulsePin, !digitalRead(steppers[stepperIndex].pulsePin));
@@ -353,6 +357,11 @@ param rpm: (float) Reference rpm
 */
 void Stepper::move_absolute(int target_position, double rpm) {
 
+  // Set the motor to run state
+  if (steppers[this->stepperIndex].motorState != State::run){
+    steppers[this->stepperIndex].motorState = State::run;
+  }
+
   steppers[this->stepperIndex].modeOfOperation = OpMode::position;
 
   if(steppers[this->stepperIndex].teethCount > 0){
@@ -361,7 +370,7 @@ void Stepper::move_absolute(int target_position, double rpm) {
     double distancePerRev = 2 * steppers[this->stepperIndex].teethCount;
 
     double targetDistance = target_position - steppers[this->stepperIndex].actualPosition;
-    double pulsesRequired = abs((2 * targetDistance * PULSES_PER_REV) / distancePerRev);          // Because timer counts both rising and falling edges.
+    double pulsesRequired = abs((targetDistance * PULSES_PER_REV) / distancePerRev);         
 
     if (targetDistance > 0){
       steppers[this->stepperIndex].turnDirection = Direction::forward;
@@ -376,6 +385,8 @@ void Stepper::move_absolute(int target_position, double rpm) {
 
     // Reference rpm.
     steppers[this->stepperIndex].rpm = rpm;
+
+    Serial.print(pulsesRequired);
   }
 
 }
@@ -387,15 +398,24 @@ void Stepper::move_relative(uint16_t target_position) {
   
 }
 
+bool Stepper::isHomed(void){
+  return steppers[this->stepperIndex].homedStatus;
+}
+
 void Stepper::home_axis(uint8_t homing_sensor_input){
-  bool sensor_status = digitalRead(homing_sensor_input);
+
+  bool sensor_status = !digitalRead(homing_sensor_input);
 
   if (sensor_status){
     steppers[this->stepperIndex].motorState = State::stop;
+
+    steppers[this->stepperIndex].actualPosition = 0;
+
+    steppers[this->stepperIndex].homedStatus = true;
+  }
+  else{
+    // set homing speed.
+    this->setRpm(10, Direction::reverse); 
   }
 
-  if (sensor_status){
-    // TODO Check the travelled distance variable.
-    steppers[this->stepperIndex].actualPosition = 0;
-  }
 }
