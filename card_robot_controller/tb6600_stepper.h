@@ -16,7 +16,7 @@ Runs using Timer 2
 #define INVALID_STEPPER 255
 
 #define PULSES_PER_REV 1600
-
+#define BELT_TOOTH_PITCH 2
 
 void Init_Timer3_ISR();
 void Init_Timer4_ISR();
@@ -75,7 +75,7 @@ class Stepper {
     void setRpm(double rpm, Direction direction);
     void setPulleyTeethCount(uint8_t teethCount);
     void move_absolute(int target_position, double rpm);
-    void move_relative(uint16_t target_position);
+    void move_relative(int target_position, double rpm);
     void home_axis(uint8_t homing_sensor_input);
     bool isHomed(void);
 

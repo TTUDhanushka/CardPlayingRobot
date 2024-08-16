@@ -263,6 +263,17 @@ void StepperHandler(int stepperIndex) {
         // Count the ticks when the pulse pin is HIGH. 
         if (digitalRead(steppers[stepperIndex].pulsePin)){
           steppers[stepperIndex].currentTickCount += 1;
+
+          double distancePerTick = (BELT_TOOTH_PITCH * steppers[stepperIndex].teethCount) / PULSES_PER_REV;
+
+          // Add 2 mm to the absolute position as the belt pitch is 2 mm.
+          if (steppers[stepperIndex].turnDirection == Direction::forward){
+            steppers[stepperIndex].actualPosition += distancePerTick;
+          }
+          else if (steppers[stepperIndex].turnDirection == Direction::reverse){
+            steppers[stepperIndex].actualPosition -= distancePerTick;
+          }
+
         }
 
         // Toggle the pulse pin.
@@ -352,7 +363,7 @@ void Stepper::stop(){
 /*
 Function: Move absolute 
 
-param target_position: (int) Target absolute positioin refering to the origin. The motor needs to be homed.
+param target_position: (int) Target absolute position with reference to the origin. The motor needs to be homed.
 param rpm: (float) Reference rpm 
 */
 void Stepper::move_absolute(int target_position, double rpm) {
@@ -367,18 +378,16 @@ void Stepper::move_absolute(int target_position, double rpm) {
   if(steppers[this->stepperIndex].teethCount > 0){
 
     // Distance = tooth pitch x number of teeth
-    double distancePerRev = 2 * steppers[this->stepperIndex].teethCount;
+    double distancePerRev = BELT_TOOTH_PITCH * steppers[this->stepperIndex].teethCount;
 
     double targetDistance = target_position - steppers[this->stepperIndex].actualPosition;
     double pulsesRequired = abs((targetDistance * PULSES_PER_REV) / distancePerRev);         
 
     if (targetDistance > 0){
       steppers[this->stepperIndex].turnDirection = Direction::forward;
-
     }
     else{
       steppers[this->stepperIndex].turnDirection = Direction::reverse;
-
     }
 
     steppers[this->stepperIndex].targetTickCount = (uint32_t)pulsesRequired;
@@ -386,22 +395,65 @@ void Stepper::move_absolute(int target_position, double rpm) {
     // Reference rpm.
     steppers[this->stepperIndex].rpm = rpm;
 
-    Serial.print(pulsesRequired);
   }
 
 }
 
 /*
 Function: Move Relative
+
+Params: (target_position) in mm as integer.
+Returns:  None.
 */
-void Stepper::move_relative(uint16_t target_position) {
-  
+void Stepper::move_relative(int target_position, double rpm) {
+    
+  // Set the motor to run state
+  if (steppers[this->stepperIndex].motorState != State::run){
+    steppers[this->stepperIndex].motorState = State::run;
+  }
+
+  // Set the operation mode.
+  steppers[this->stepperIndex].modeOfOperation = OpMode::position;
+
+  if(steppers[this->stepperIndex].teethCount > 0){
+
+    // Distance = tooth pitch x number of teeth
+    double distancePerRev = BELT_TOOTH_PITCH * steppers[this->stepperIndex].teethCount;
+
+    double targetDistance = target_position;
+    double pulsesRequired = abs((targetDistance * PULSES_PER_REV) / distancePerRev);         
+
+    if (targetDistance > 0){
+      steppers[this->stepperIndex].turnDirection = Direction::forward;
+    }
+    else{
+      steppers[this->stepperIndex].turnDirection = Direction::reverse;
+    }
+
+    steppers[this->stepperIndex].targetTickCount = (uint32_t)pulsesRequired;
+
+    // Reference rpm.
+    steppers[this->stepperIndex].rpm = rpm;
+
+  }
+
 }
 
+/*
+Function:   Get home status of the axis.
+Params:     None
+Returns:    Homing status as a boolean output.
+*/
 bool Stepper::isHomed(void){
   return steppers[this->stepperIndex].homedStatus;
 }
 
+/*
+Function:     Axis homing.
+Description:  Motion direction is forward.
+Params:       (homing_sensor_input) Hardware pin reference to the external limit switch.
+Returns:      None
+*/
 void Stepper::home_axis(uint8_t homing_sensor_input){
 
   bool sensor_status = !digitalRead(homing_sensor_input);
