@@ -168,7 +168,10 @@ void loop(){
           x_stepper.home_axis(X_POS_LIM_SW);
         }
         else{
-          x_stepper.move_absolute(240, 20);
+          if (!x_stepper.isBusy()){
+            x_stepper.move_absolute(240, 160);
+          }
+
         }
 
 // ------------------ ABsolute position control

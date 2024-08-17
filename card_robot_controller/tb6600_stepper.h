@@ -18,9 +18,8 @@ Runs using Timer 2
 #define PULSES_PER_REV 1600
 #define BELT_TOOTH_PITCH 2
 
-void Init_Timer3_ISR();
-void Init_Timer4_ISR();
-void StepperHandler(int stepperIndex);
+#define DEFAULT_ACCELERATION 10   // mm/s^2
+#define DEFAULT_DECELERATION 10   // mm/s^2 
 
 typedef enum {
   forward = true,
@@ -46,12 +45,21 @@ typedef enum{
   timer5 = 2
 } Timers;
 
+void Init_Timer3_ISR();
+void Init_Timer4_ISR();
+void Init_Timer5_ISR();
+void StepperHandler(int stepperIndex);
+void update_timer_register(Timers timerId, double speed);
+
 typedef struct {
   // Hardware pins
   volatile uint8_t pulsePin;
   volatile uint8_t directionPin;
 
   volatile bool homedStatus;
+  volatile bool busy;
+  volatile bool error;
+  volatile uint8_t errorId;
 
   // Hardware timer
   Timers timer;
@@ -78,6 +86,7 @@ class Stepper {
     void move_relative(int target_position, double rpm);
     void home_axis(uint8_t homing_sensor_input);
     bool isHomed(void);
+    bool isBusy(void);
 
   private:
     uint8_t stepperIndex;

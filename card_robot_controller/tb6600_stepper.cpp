@@ -257,6 +257,9 @@ void StepperHandler(int stepperIndex) {
       }
 
       if (steppers[stepperIndex].targetTickCount > steppers[stepperIndex].currentTickCount){
+        
+        // There is an active task for the axis.
+        steppers[stepperIndex].busy == true;
 
         steppers[stepperIndex].motorState == State::run;
 
@@ -282,6 +285,9 @@ void StepperHandler(int stepperIndex) {
       }
       else{
         steppers[stepperIndex].motorState == State::stop;
+
+        // Task complete.
+        steppers[stepperIndex].busy == false;
       }
 
     }
@@ -437,6 +443,15 @@ void Stepper::move_relative(int target_position, double rpm) {
 
   }
 
+}
+
+/*
+Function:   Get axis activity state, i.e busy or not.
+Params:     None
+Returns:    Axis activity status as a boolean output.
+*/
+bool Stepper::isBusy(void){
+  return steppers[this->stepperIndex].busy;
 }
 
 /*
