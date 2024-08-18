@@ -16,6 +16,9 @@ volatile bool y_pos_lim_state = true, y_neg_lim_state = true;
 // volatile double _tickCount = 0;
 volatile uint16_t dividend = 10000;
 double pulseCount = 0;
+volatile bool xHomed = false;
+volatile bool yHomed = false;
+volatile bool homingStatus = false;
 
 // Servo grabber_servo; 
 
@@ -36,21 +39,39 @@ const byte PULSE_MOTOR_A = 10, PULSE_MOTOR_B = 11;
 const uint16_t MAX_PPS = 5000, MIN_PPS = 400;
 const uint16_t MAX_RPM = 750, MIN_RPM = 0;
 
-enum RobotState {Idle, Initializing, Running, ShuttingDown, Error};
+enum RobotState { Idle, 
+                  Initializing, 
+                  Running, 
+                  ShuttingDown, 
+                  Error
+                };
 RobotState robotCurrentState = Idle;
+
+typedef struct{
+  int x;
+  int y;
+} xy_point_t;
+
+typedef struct{
+  int x;
+  int y;
+} step_point_t;
 
 // Function prototypes
 //void setup_uart0_rx_interrupts();
 void setup_io_ports();
 
-void initialize_robot();
+void homeRobot(uint8_t x_axis_home_switch, uint8_t y_axis_home_switch);
+bool isHomed();
+void setHomingStatus();
+void resetHomingStatus();
 
 // void x_pos_lim_interrupt();
 
 bool WriteToSerialPort(unsigned char data);
-bool home_x_y_axes();
+step_point_t xyToStepperAxes(xy_point_t coord);
 
-Stepper x_stepper, y_stepper;
+Stepper right_stepper, left_stepper;
 
 void setup_io_ports(){
   // Status indicator
@@ -111,12 +132,15 @@ void setup()
   attachInterrupt(digitalPinToInterrupt(X_POS_LIM_SW), x_pos_lim_interrupt, CHANGE);
   attachInterrupt(digitalPinToInterrupt(X_NEG_LIM_SW), x_neg_lim_interrupt, CHANGE);
 
-  x_stepper.attach(PULSE_MOTOR_A, DIR_MOTOR_A);
-  y_stepper.attach(PULSE_MOTOR_B, DIR_MOTOR_B);
+  right_stepper.attach(PULSE_MOTOR_A, DIR_MOTOR_A);
+  left_stepper.attach(PULSE_MOTOR_B, DIR_MOTOR_B);
 
 
-  x_stepper.setPulleyTeethCount(60);
-  y_stepper.setPulleyTeethCount(60);
+  right_stepper.setPulleyTeethCount(60);
+  left_stepper.setPulleyTeethCount(60);
+
+  right_stepper.invert(true);
+  left_stepper.invert(false);
   // grabber_servo.attach(7);
 
 }
@@ -128,72 +152,98 @@ void loop(){
 
     case Idle:
       
-      //Serial.println("Idle state");
+      Serial.println("Idle state");
+
       // Do nothing and switch off motors.
-      //digitalWrite(PULSE_MOTOR_A, LOW);
-      //digitalWrite(PULSE_MOTOR_B, LOW);
-
-      // //---------------------- Motor speed increasing --------------------------------------
-      // for(int n = 0; n < 299; n++){
-      //   x_stepper.setRpm(n/10, Direction::forward);
-      //   // y_stepper.setRpm(n);  
-
-      //    delay(50);
-      // }
-
-      // // y_stepper.stop(); // 
+      right_stepper.stop(); 
+      left_stepper.stop();  
       
-      // for(int n = 299; n > 0; n--){
-      //   x_stepper.setRpm(n/10, Direction::forward);
-      //   delay(50);
-      // }
-
-      // for(int n = 0; n < 299; n++){
-      //   x_stepper.setRpm(n/10, Direction::reverse);
-      //   // y_stepper.setRpm(n);  
-
-      //    delay(50);
-      // }
-
-      // // y_stepper.stop(); // 
-      
-      // for(int n = 299; n > 0; n--){
-      //   x_stepper.setRpm(n/10, Direction::reverse);
-      //   delay(50);
-      // }
-        // x_stepper.setRpm(1, Direction::reverse);        // Can't handle floating points below 1.0
-        delay(50);
-
-        if(!x_stepper.isHomed()){
-          x_stepper.home_axis(X_POS_LIM_SW);
-        }
-        else{
-          if (!x_stepper.isBusy()){
-            x_stepper.move_absolute(240, 160);
-          }
-
-        }
-
-// ------------------ ABsolute position control
-        //x_stepper.move_absolute(240, 250);
-        // y_stepper.move_absolute(180, 50);  
-
-      //grabber_servo.write(150);
-
-      // digitalWrite(ATTACHER, HIGH);
+      // Once command comes from the UI, this part will be changed
+      robotCurrentState = RobotState::Initializing;
+        
+      delay(200);
 
       break;
 
     case Initializing:
 
-      initialize_robot();
-      Serial.println("Initializing");
+      // Serial.println("Homing the robot");
+
+      homeRobot(X_POS_LIM_SW, Y_POS_LIM_SW);;
+
+      if (isHomed()){
+        robotCurrentState = RobotState::Running;
+      }
+
+      delay(200);
+
       break;
+
+    case Running:
+      // Serial.println("Robot is ready for action");
+      
+      // //---------------------- Motor speed increasing --------------------------------------
+      // for(int n = 0; n < 299; n++){
+      //   right_stepper.setRpm(n/10, Direction::forward);
+      //   // left_stepper.setRpm(n);  
+
+      //    delay(50);
+      // }
+      
+      // for(int n = 299; n > 0; n--){
+      //   right_stepper.setRpm(n/10, Direction::forward);
+      //   delay(50);
+      // }
+
+      // for(int n = 0; n < 299; n++){
+      //   right_stepper.setRpm(n/10, Direction::reverse);
+      //   // left_stepper.setRpm(n);  
+
+      //    delay(50);
+      // }
+
+          // for(int n = 299; n > 0; n--){
+      //   right_stepper.setRpm(n/10, Direction::reverse);
+      //   delay(50);
+      // }
+        // right_stepper.setRpm(1, Direction::reverse);        // Can't handle floating points below 1.0
+        delay(50);
+
+
+
+        if (!right_stepper.isBusy()){
+          xy_point_t target;
+          target.x = 0;
+          target.y = 120;
+
+          step_point_t motorDistances = xyToStepperAxes(target);
+
+          right_stepper.move_relative(motorDistances.y, 160);
+          left_stepper.move_relative(motorDistances.x, 160);
+
+        }
+
+
+
+// ------------------ ABsolute position control
+        //right_stepper.move_absolute(240, 250);
+        // left_stepper.move_absolute(180, 50);  
+
+      //grabber_servo.write(150);
+
+      // digitalWrite(ATTACHER, HIGH);
+    break;
+
+    case Error:
+      // In case of error stop everything.
+
+
+    break;
 
   }
   
 
-  // x_neg_lim_state = 0;
+  // -------------- For diagnosis.------------------------------------------
 
   // if (!x_neg_lim_state){
   //   digitalWrite(LED_BUILTIN, HIGH);
@@ -206,34 +256,97 @@ void loop(){
 
 }
 
-void initialize_robot(){
+void homeRobot(uint8_t x_axis_home_switch, uint8_t y_axis_home_switch){
 
-  // Enable motors
-  digitalWrite(ENABLE_MOTOR_A, HIGH);
-  digitalWrite(ENABLE_MOTOR_B, HIGH);
+  // First check the X axis and move to the home position.
+  bool x_sensor = digitalRead(x_axis_home_switch);
+  bool y_sensor = digitalRead(y_axis_home_switch);
+
+  if (x_sensor){
+    xHomed = false;
+  }
+  else{
+    xHomed = true;
+  }
+
+  if (y_sensor){
+    yHomed = false;
+  }
+  else{
+    yHomed = true;
+  }
+
+  // Second check the Y axis and move to the home position.
+  static uint8_t homingAxis = 0;
+
+  switch(homingAxis){
+    case 0:
+      if (!xHomed){
+        // This moves in X - direction
+        right_stepper.setRpm(20, Direction::forward);
+        left_stepper.setRpm(20, Direction::reverse);
+      }
+      else{
+        right_stepper.stop();
+        left_stepper.stop();
+
+        homingAxis++;
+      }
+    break;
+
+    case 1:
+      if (!yHomed){
+        // This moves in Y - direction
+        right_stepper.setRpm(20, Direction::reverse);
+        left_stepper.setRpm(20, Direction::reverse);
+      }
+      else{
+        right_stepper.stop();
+        left_stepper.stop();
+
+        homingAxis++;
+      }
+
+    break;
+
+    default:
+
+      right_stepper.stop();
+      left_stepper.stop();
+
+    break;
+
+  }
+
+  if (homingAxis > 1){
+    setHomingStatus();
+  }
 
 }
 
-// bool WriteToSerialPort(unsigned char data){
-//   while (!(UCSR0A &= bit(UDRE0))) 
-//   {
-//     ;
-//   }
-  
-//   UDR0 = data;
-  
-//   return true;
-// }
+bool isHomed(){
+  return homingStatus;
+}
 
-// // UART0 receive interrupt service routine.
-// ISR(USART0_RX_vect){
+void setHomingStatus(){
+  homingStatus = true;
+}
 
-// // Do something
-  
-// }
+void resetHomingStatus(){
+  homingStatus = false;
+}
 
+step_point_t xyToStepperAxes(xy_point_t coord){
 
-volatile bool state = false;
+  double transformationMatrix[2][2] = {{1.0, -1.0}, {1.0, 1.0}};
+
+  step_point_t out;
+
+  out.x = (double) (transformationMatrix[0][0] * coord.x + transformationMatrix[0][1] * coord.y);
+  out.y = (double) (transformationMatrix[1][0] * coord.x + transformationMatrix[1][1] * coord.y);
+
+  return out;
+}
 
 // X-axis positive  direction limit switch interrupt.
 void x_pos_lim_interrupt(){
@@ -256,3 +369,21 @@ void y_neg_lim_interrupt(){
   Serial.println("y neg lim");
   y_neg_lim_state = digitalRead(Y_NEG_LIM_SW);
 }
+
+// bool WriteToSerialPort(unsigned char data){
+//   while (!(UCSR0A &= bit(UDRE0))) 
+//   {
+//     ;
+//   }
+  
+//   UDR0 = data;
+  
+//   return true;
+// }
+
+// // UART0 receive interrupt service routine.
+// ISR(USART0_RX_vect){
+
+// // Do something
+  
+// }

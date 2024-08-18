@@ -58,6 +58,7 @@ typedef struct {
 
   volatile bool homedStatus;
   volatile bool busy;
+  volatile bool inverted;             // Invert the rotation direction.
   volatile bool error;
   volatile uint8_t errorId;
 
@@ -84,10 +85,10 @@ class Stepper {
     void setPulleyTeethCount(uint8_t teethCount);
     void move_absolute(int target_position, double rpm);
     void move_relative(int target_position, double rpm);
-    void home_axis(uint8_t homing_sensor_input);
-    bool isHomed(void);
     bool isBusy(void);
-
+    bool isInverted();
+    bool Stepper::invert(bool invertDirection);
+    
   private:
     uint8_t stepperIndex;
 };
