@@ -283,9 +283,25 @@ void StepperHandler(int stepperIndex) {
 
           // Add 2 mm to the absolute position as the belt pitch is 2 mm.
           if (steppers[stepperIndex].turnDirection == Direction::forward){
+
+            if(steppers[stepperIndex].inverted){
+              digitalWrite(steppers[stepperIndex].directionPin, LOW);
+            }
+            else{
+              digitalWrite(steppers[stepperIndex].directionPin, HIGH);
+            }
+
             steppers[stepperIndex].actualPosition += distancePerTick;
           }
           else if (steppers[stepperIndex].turnDirection == Direction::reverse){
+                    
+            if(steppers[stepperIndex].inverted){
+              digitalWrite(steppers[stepperIndex].directionPin, HIGH);
+            }
+            else{
+              digitalWrite(steppers[stepperIndex].directionPin, LOW);
+            }
+
             steppers[stepperIndex].actualPosition -= distancePerTick;
           }
 
@@ -425,7 +441,7 @@ Function: Move Relative
 Params: (target_position) in mm as integer.
 Returns:  None.
 */
-void Stepper::move_relative(int target_position, double rpm) {
+void Stepper::move_relative(double targetDistance, double rpm) {
     
   // Set the motor to run state
   if (steppers[this->stepperIndex].motorState != State::run){
@@ -440,7 +456,6 @@ void Stepper::move_relative(int target_position, double rpm) {
     // Distance = tooth pitch x number of teeth
     double distancePerRev = BELT_TOOTH_PITCH * steppers[this->stepperIndex].teethCount;
 
-    double targetDistance = target_position;
     double pulsesRequired = abs((targetDistance * PULSES_PER_REV) / distancePerRev);         
 
     if (targetDistance > 0){

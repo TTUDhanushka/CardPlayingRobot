@@ -84,11 +84,11 @@ class Stepper {
     void setRpm(double rpm, Direction direction);
     void setPulleyTeethCount(uint8_t teethCount);
     void move_absolute(int target_position, double rpm);
-    void move_relative(int target_position, double rpm);
+    void move_relative(double target_position, double rpm);
     bool isBusy(void);
     bool isInverted();
     bool Stepper::invert(bool invertDirection);
-    
+
   private:
     uint8_t stepperIndex;
 };
