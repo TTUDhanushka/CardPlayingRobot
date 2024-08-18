@@ -188,11 +188,11 @@ void loop() {
       step_point_t motorDistances = xyToStepperAxes(target);
 
       if (!right_stepper.isBusy()) {
-        right_stepper.move_relative(motorDistances.r, 160);
+        right_stepper.move_relative(motorDistances.r, 299);
       }
 
       if (!left_stepper.isBusy()) {
-        left_stepper.move_relative(motorDistances.l, 160);
+        left_stepper.move_relative(motorDistances.l, 299);
       }
 
       //grabber_servo.write(150);
